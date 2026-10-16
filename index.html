@@ -334,6 +334,8 @@ const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwC
 
 /* Sistemas do Saint Center. Para incluir um novo, acrescente uma linha aqui. */
 const MODULOS = [
+  { k:'saintacademy', nome:'SaintAcademy',          area:'Treinamento',      desc:'Onde tudo começa: a pessoa inicia e aprende aqui. Usa login próprio.',
+    url:'https://saintgermainb-hub.github.io/saintacademy/', niveis:{equipe:'Acesso', admin:'Administração'} },
   { k:'lentes',       nome:'Fila de Lentes',        area:'Operação',         desc:'Receitas, DNP e ordens de serviço das lentes dos clientes.',
     url:'https://saintgermainb-hub.github.io/saintgermainlentes/', niveis:{equipe:'Equipe', admin:'Administração'} },
   { k:'chargeback',   nome:'Chargebacks',           area:'Financeiro',       desc:'Registro das contestações, prazos de defesa e resultados.',
@@ -341,11 +343,9 @@ const MODULOS = [
   { k:'pix',          nome:'Solicitações de PIX',   area:'Financeiro',       desc:'Pagamentos de free e testes do time.',
     url:'', breve:true, niveis:{equipe:'Solicitar', admin:'Gerenciar'} },
   { k:'coordenacao',  nome:'Coordenação de Equipe', area:'Gestão de Equipe', desc:'Escala 12x36, turnos, 1:1 e desenvolvimento do time.',
-    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} },
-  { k:'saintacademy', nome:'SaintAcademy',          area:'Treinamento',      desc:'Trilhas de treinamento do time. Usa login próprio.',
-    url:'https://saintgermainb-hub.github.io/saintacademy/', niveis:{equipe:'Acesso', admin:'Administração'} }
+    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} }
 ];
-const AREAS = ['Operação','Financeiro','Gestão de Equipe','Treinamento'];
+const AREAS = ['Treinamento','Operação','Financeiro','Gestão de Equipe']; // SaintAcademy sempre em primeiro: é onde a pessoa inicia e aprende
 const MODELOS = {
   coordenacao:{ admin:true,  perms:{lentes:'admin', chargeback:'admin', pix:'admin', coordenacao:'admin', saintacademy:'admin'} },
   supervisao: { admin:false, perms:{lentes:'equipe', pix:'equipe', coordenacao:'equipe', saintacademy:'equipe'} },
