@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saint Center · Saint Germain</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#000000">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&display=swap">
+<style>
+:root{--bg:#ffffff;--fg:#000000;--g1:#414142;--g2:#5b5b60;--g3:#aea9b4;--soft:#f6f5f7;
+  --font:"Questrial","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font-family:var(--font);font-size:12px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--fg);
+  background:var(--fg);color:var(--bg);padding:12px 18px;cursor:pointer;border-radius:0}
+button.ghost{background:transparent;color:var(--fg)}
+button.link{background:none;border:0;padding:6px 0;color:var(--g2);text-decoration:underline;text-underline-offset:3px;letter-spacing:.08em}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:1px solid var(--fg);outline-offset:2px}
+input,select{font-family:var(--font);font-size:15px;border:1px solid var(--g3);background:var(--bg);color:var(--fg);padding:12px;border-radius:0;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--fg)}
+label.campo{display:grid;gap:6px;text-align:left}
+.k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--g2)}
+.mut{color:var(--g2);font-size:13px;line-height:1.55}
+.marca{letter-spacing:.55em;font-size:12px;color:var(--g2);white-space:nowrap}
+.msg{font-size:13px;line-height:1.5;min-height:1em}
+.msg.erro{color:var(--fg);border-left:2px solid var(--fg);padding-left:10px}
+.msg.ok{color:var(--g1);border-left:2px solid var(--g3);padding-left:10px}
+
+/* ---------- Login ---------- */
+#vLogin{min-height:100%;display:grid;place-items:center;padding:40px 16px}
+.box{width:100%;max-width:380px;display:grid;gap:14px;text-align:center}
+.box h1{font-weight:400;font-size:34px;letter-spacing:.06em;margin:8px 0 2px}
+.box .lema{margin:0 0 22px}
+.box form{display:grid;gap:12px}
+.rodape{margin-top:34px;font-size:11px;letter-spacing:.2em;color:var(--g3);text-transform:uppercase}
+
+/* ---------- App ---------- */
+#vApp{height:100%;display:grid;grid-template-columns:260px minmax(0,1fr)}
+aside{border-right:1px solid var(--g3);display:flex;flex-direction:column;min-height:0;background:var(--bg)}
+.lateral-topo{padding:30px 26px 22px;border-bottom:1px solid var(--g3)}
+.lateral-topo .nome-sis{font-size:22px;letter-spacing:.06em;margin-top:8px}
+nav{flex:1;overflow:auto;padding:14px 0 20px}
+nav .grupo{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--g3);padding:18px 26px 8px}
+nav a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 26px;text-decoration:none;color:var(--g1);
+  font-size:14px;letter-spacing:.03em;border-left:2px solid transparent}
+nav a:hover{color:var(--fg);background:var(--soft)}
+nav a[aria-current="page"]{color:var(--fg);border-left-color:var(--fg);background:var(--soft)}
+nav a .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--g3)}
+.lateral-pe{border-top:1px solid var(--g3);padding:18px 26px 22px;display:grid;gap:4px}
+.lateral-pe .quem{font-size:14px}
+.lateral-pe .cargo{font-size:12px;color:var(--g2);margin-bottom:6px}
+.lateral-pe .acoes{display:flex;gap:16px;flex-wrap:wrap}
+
+main{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.topo-movel{display:none}
+.pagina{flex:1;overflow:auto}
+.conteudo{max-width:1120px;margin:0 auto;padding:44px 40px 70px}
+.cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:1px solid var(--g3);padding-bottom:22px;margin-bottom:34px}
+.cab h2{font-weight:400;font-size:30px;letter-spacing:.04em;margin:6px 0 0}
+.cab .sub{color:var(--g2);font-size:13px;margin-top:8px}
+
+.area{margin-bottom:40px}
+.area>.k{display:block;margin-bottom:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{border:1px solid var(--g3);padding:24px 22px 20px;display:flex;flex-direction:column;gap:10px;min-height:190px;
+  text-decoration:none;color:var(--fg);background:var(--bg);transition:border-color .15s}
+a.card:hover{border-color:var(--fg)}
+.card h3{font-weight:400;font-size:19px;letter-spacing:.03em;margin:0}
+.card p{margin:0;color:var(--g2);font-size:13px;line-height:1.55;flex:1}
+.card .pe{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--soft);padding-top:12px}
+.card .nivel{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--g1)}
+.card .abrir{font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+.card.breve{background:var(--soft);border-style:dashed}
+.card.breve .abrir{color:var(--g3)}
+.vazio{border:1px dashed var(--g3);padding:40px 24px;text-align:center;color:var(--g2);line-height:1.6}
+
+/* módulo aberto */
+.modulo{flex:1;display:flex;flex-direction:column;min-height:0}
+.barra-mod{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--g3);font-size:13px}
+.barra-mod .t{letter-spacing:.06em}
+.barra-mod a{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--g2);text-decoration:none}
+.barra-mod a:hover{color:var(--fg)}
+.frames{flex:1;position:relative;min-height:0}
+.frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+.carregando{position:absolute;inset:0;display:grid;place-items:center;color:var(--g2);font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+
+/* pessoas */
+.ferramentas{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px}
+.ferramentas input{flex:1 1 260px;width:auto}
+.tabela{border-top:1px solid var(--g3)}
+.linha{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2.2fr) 110px 120px;gap:18px;align-items:center;padding:16px 4px;border-bottom:1px solid var(--g3)}
+.linha.cabecalho{padding:10px 4px}
+.linha .nome{font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:10px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--g3);padding:5px 8px;color:var(--g1);white-space:nowrap}
+.chip.forte{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.status{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--g1)}
+.status.off{color:var(--g3);text-decoration:line-through}
+.linha .acoes{display:flex;gap:8px;justify-content:flex-end}
+.linha .acoes button{padding:8px 12px;font-size:10px}
+.hist .linha{grid-template-columns:150px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr)}
+
+/* diálogo */
+dialog{border:1px solid var(--fg);padding:0;width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 40px);color:var(--fg);background:var(--bg)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg{padding:30px 30px 26px;display:grid;gap:18px}
+.dlg h3{font-weight:400;font-size:22px;letter-spacing:.04em;margin:0}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modelos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.modelos button{padding:7px 11px;font-size:10px}
+.perms{border-top:1px solid var(--g3)}
+.perm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--g3)}
+.perm .n{font-size:14px}
+.perm .n small{display:block;color:var(--g2);font-size:11px;letter-spacing:.06em;margin-top:2px}
+.seg{display:flex;border:1px solid var(--g3)}
+.seg label{cursor:pointer}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg span{display:block;padding:8px 11px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--g2);white-space:nowrap}
+.seg input:checked+span{background:var(--fg);color:var(--bg)}
+.seg input:focus-visible+span{outline:1px solid var(--fg);outline-offset:-3px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45;text-align:left;cursor:pointer}
+.check input{width:16px;height:16px;margin:2px 0 0;accent-color:#000000;flex:none}
+.rodape-dlg{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+/* ---------- Celular ---------- */
+@media (max-width:860px){
+  #vApp{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .topo-movel{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--g3)}
+  .topo-movel .nome-sis{font-size:17px;letter-spacing:.06em}
+  .topo-movel button{padding:9px 12px;font-size:10px}
+  aside{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);z-index:20;transform:translateX(-100%);transition:transform .2s;box-shadow:0 0 0 100vmax rgba(0,0,0,0);}
+  body.menu-aberto aside{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.4)}
+  main{grid-row:2}
+  .conteudo{padding:28px 16px 60px}
+  .cab h2{font-size:24px}
+  .linha,.hist .linha{grid-template-columns:1fr;gap:8px}
+  .linha.cabecalho{display:none}
+  .linha .acoes{justify-content:flex-start}
+  .grade2{grid-template-columns:1fr}
+  .perm{grid-template-columns:1fr}
+  .dlg{padding:24px 18px 20px}
+  .barra-mod{padding:10px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<section id="vLogin">
+  <div class="box">
+    <div class="marca">SAINT GERMAIN</div>
+    <h1>Saint Center</h1>
+    <p class="mut lema">Todos os sistemas internos em um só lugar.</p>
+
+    <form id="fEntrar" hidden>
+      <label class="campo"><span class="k">Login ou e-mail</span><input id="lLogin" autocomplete="username" autocapitalize="off" required></label>
+      <label class="campo"><span class="k">Senha</span><input id="lSenha" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Entrar</button>
+      <button type="button" class="link" id="irEsqueci">Esqueci minha senha</button>
+      <div class="msg" id="mEntrar" role="status"></div>
+    </form>
+
+    <form id="fEsqueci" hidden>
+      <p class="mut">Informe seu login ou e-mail. Enviamos uma senha temporária para o seu e-mail. Ao entrar com ela, você cria uma senha nova.</p>
+      <label class="campo"><span class="k">Login ou e-mail</span><input id="eId" autocapitalize="off" required></label>
+      <button type="submit">Enviar senha temporária</button>
+      <button type="button" class="link" data-voltar>Voltar para o login</button>
+      <div class="msg" id="mEsqueci" role="status"></div>
+    </form>
+
+    <form id="fNova" hidden>
+      <p class="mut">Você entrou com uma senha temporária. Crie agora a sua senha, só sua.</p>
+      <label class="campo"><span class="k">Nova senha</span><input id="nSenha" type="password" minlength="6" autocomplete="new-password" required placeholder="Mínimo 6 caracteres"></label>
+      <label class="campo"><span class="k">Repita a nova senha</span><input id="nSenha2" type="password" minlength="6" autocomplete="new-password" required></label>
+      <button type="submit">Salvar e entrar</button>
+      <button type="button" class="link" id="cancelaNova">Sair</button>
+      <div class="msg" id="mNova" role="status"></div>
+    </form>
+
+    <form id="fPrimeira" hidden>
+      <p class="mut">Primeiro acesso. Crie o cadastro da coordenação — ela administra pessoas e permissões de todos os sistemas.</p>
+      <label class="campo"><span class="k">Nome</span><input id="pNome" required autocomplete="name"></label>
+      <label class="campo"><span class="k">Login</span><input id="pLogin" required autocapitalize="off" placeholder="ex.: karine"></label>
+      <label class="campo"><span class="k">E-mail</span><input id="pEmail" type="email" required></label>
+      <label class="campo"><span class="k">Senha</span><input id="pSenha" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
+      <button type="submit">Criar e entrar</button>
+      <div class="msg" id="mPrimeira" role="status"></div>
+    </form>
+
+    <div class="msg" id="mCarregando">Carregando…</div>
+    <div class="rodape">Juntos vamos mais longe</div>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<section id="vApp" hidden>
+  <aside id="lateral" aria-label="Menu">
+    <div class="lateral-topo">
+      <div class="marca">SAINT GERMAIN</div>
+      <div class="nome-sis">Saint Center</div>
+    </div>
+    <nav id="menu"></nav>
+    <div class="lateral-pe">
+      <div class="quem" id="euNome"></div>
+      <div class="cargo" id="euCargo"></div>
+      <div class="acoes">
+        <button type="button" class="link" id="btnMinhaSenha">Minha senha</button>
+        <button type="button" class="link" id="btnSair">Sair</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topo-movel">
+      <div><div class="marca">SAINT GERMAIN</div><div class="nome-sis">Saint Center</div></div>
+      <button type="button" class="ghost" id="btnMenu" aria-controls="lateral" aria-expanded="false">Menu</button>
+    </div>
+
+    <div class="pagina" id="pgInicio" hidden>
+      <div class="conteudo">
+        <div class="cab">
+          <div><span class="k" id="hoje"></span><h2 id="ola"></h2><div class="sub">Seus sistemas, organizados por área.</div></div>
+        </div>
+        <div id="areas"></div>
+      </div>
+    </div>
+
+    <div class="modulo" id="pgModulo" hidden>
+      <div class="barra-mod">
+        <span class="t" id="modTitulo"></span>
+        <a id="modNovaAba" href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+      </div>
+      <div class="frames" id="frames"></div>
+    </div>
+
+    <div class="pagina" id="pgPessoas" hidden>
+      <div class="conteudo">
+        <div class="cab">
+          <div><span class="k">Administração</span><h2>Pessoas e acessos</h2>
+            <div class="sub">Um cadastro por pessoa. Aqui você define em quais sistemas ela entra e com qual nível.</div></div>
+          <button type="button" id="btnNova">Nova pessoa</button>
+        </div>
+        <div class="ferramentas">
+          <input id="busca" type="search" placeholder="Buscar por nome, login, cargo ou e-mail">
+          <select id="filtroStatus" style="width:auto">
+            <option value="ativos">Ativas</option><option value="inativos">Desativadas</option><option value="todos">Todas</option>
+          </select>
+        </div>
+        <div class="tabela" id="tabPessoas"></div>
+      </div>
+    </div>
+
+    <div class="pagina" id="pgAcessos" hidden>
+      <div class="conteudo">
+        <div class="cab">
+          <div><span class="k">Administração</span><h2>Histórico de acessos</h2>
+            <div class="sub">Entradas, cadastros e alterações de permissão. Últimos 300 registros.</div></div>
+          <button type="button" class="ghost" id="btnAtuHist">Atualizar</button>
+        </div>
+        <div class="tabela hist" id="tabHist"></div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ================= DIÁLOGOS ================= -->
+<dialog id="dlgPessoa">
+  <form class="dlg" id="fPessoa" method="dialog">
+    <div><span class="k" id="dpK">Cadastro</span><h3 id="dpTitulo">Nova pessoa</h3></div>
+    <div class="grade2">
+      <label class="campo"><span class="k">Nome</span><input id="dpNome" required></label>
+      <label class="campo"><span class="k">Login</span><input id="dpLogin" required autocapitalize="off" placeholder="ex.: vitoria"></label>
+      <label class="campo"><span class="k">E-mail</span><input id="dpEmail" type="email" placeholder="Usado no Esqueci minha senha"></label>
+      <label class="campo"><span class="k">Cargo</span><input id="dpCargo" list="cargos" placeholder="ex.: Supervisão"></label>
+    </div>
+    <datalist id="cargos"><option>Coordenação</option><option>Supervisão</option><option>Líder de Suporte</option><option>Suporte</option><option>Suporte Financeiro</option><option>Diretoria</option><option>Gerência</option></datalist>
+
+    <div>
+      <div class="modelos"><span class="k">Modelos rápidos</span>
+        <button type="button" class="ghost" data-modelo="coordenacao">Coordenação</button>
+        <button type="button" class="ghost" data-modelo="supervisao">Supervisão</button>
+        <button type="button" class="ghost" data-modelo="financeiro">Financeiro</button>
+        <button type="button" class="ghost" data-modelo="suporte">Suporte</button>
+        <button type="button" class="ghost" data-modelo="nenhum">Limpar</button>
+      </div>
+      <p class="mut" style="margin:8px 0 0">O modelo só preenche as opções abaixo — ajuste o que precisar antes de salvar.</p>
+    </div>
+
+    <div class="perms" id="dpPerms"></div>
+
+    <label class="check"><input type="checkbox" id="dpAdmin"><span>Administra o Saint Center<br><span class="mut">Pode cadastrar pessoas e mudar permissões.</span></span></label>
+    <label class="check"><input type="checkbox" id="dpAtivo" checked><span>Acesso ativo<br><span class="mut">Desmarque para bloquear a entrada sem perder o histórico.</span></span></label>
+
+    <div id="dpSenhaBox" class="grade2" style="align-items:end">
+      <label class="campo"><span class="k">Senha inicial (opcional)</span><input id="dpSenha" type="text" autocomplete="off" placeholder="Mínimo 6 caracteres"></label>
+      <label class="check" id="dpEnviarBox"><input type="checkbox" id="dpEnviar" checked><span>Enviar acesso por e-mail<br><span class="mut">Senha temporária válida por 72h.</span></span></label>
+    </div>
+    <p class="mut" style="margin:-6px 0 0">Com senha inicial, a pessoa cria a própria senha no primeiro acesso.</p>
+
+    <div class="msg" id="mPessoa" role="status"></div>
+    <div class="rodape-dlg">
+      <button type="button" class="ghost" id="dpReenviar" hidden>Reenviar acesso</button>
+      <button type="button" class="ghost" id="dpCancelar">Cancelar</button>
+      <button type="submit" id="dpSalvar">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgSenha">
+  <form class="dlg" id="fSenha" method="dialog">
+    <div><span class="k">Minha conta</span><h3>Trocar senha</h3></div>
+    <label class="campo"><span class="k">Senha atual</span><input id="sAtual" type="password" required autocomplete="current-password"></label>
+    <label class="campo"><span class="k">Nova senha</span><input id="sNova" type="password" minlength="6" required autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
+    <label class="campo"><span class="k">Repita a nova senha</span><input id="sNova2" type="password" minlength="6" required autocomplete="new-password"></label>
+    <div class="msg" id="mSenha" role="status"></div>
+    <div class="rodape-dlg">
+      <button type="button" class="ghost" id="sCancelar">Cancelar</button>
+      <button type="submit">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ===== Configuração ===== */
+const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwCgpSVpFrn3gvsS2HGniMxP14pNNmVIRXLGqP8_F3g/exec'; // link do app do Apps Script "Saint Center" (termina em /exec)
+
+/* Sistemas do Saint Center. Para incluir um novo, acrescente uma linha aqui. */
+const MODULOS = [
+  { k:'lentes',       nome:'Fila de Lentes',        area:'Operação',         desc:'Receitas, DNP e ordens de serviço das lentes dos clientes.',
+    url:'https://saintgermainb-hub.github.io/saintgermainlentes/', niveis:{equipe:'Equipe', admin:'Administração'} },
+  { k:'chargeback',   nome:'Chargebacks',           area:'Financeiro',       desc:'Registro das contestações, prazos de defesa e resultados.',
+    url:'https://saintgermainb-hub.github.io/saintgermainchargeback/', niveis:{equipe:'Equipe', admin:'Administração'} },
+  { k:'pix',          nome:'Solicitações de PIX',   area:'Financeiro',       desc:'Pagamentos de free e testes do time.',
+    url:'', breve:true, niveis:{equipe:'Solicitar', admin:'Gerenciar'} },
+  { k:'coordenacao',  nome:'Coordenação de Equipe', area:'Gestão de Equipe', desc:'Escala 12x36, turnos, 1:1 e desenvolvimento do time.',
+    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} },
+  { k:'saintacademy', nome:'SaintAcademy',          area:'Treinamento',      desc:'Trilhas de treinamento do time. Usa login próprio.',
+    url:'https://saintgermainb-hub.github.io/saintacademy/', niveis:{equipe:'Acesso', admin:'Administração'} }
+];
+const AREAS = ['Operação','Financeiro','Gestão de Equipe','Treinamento'];
+const MODELOS = {
+  coordenacao:{ admin:true,  perms:{lentes:'admin', chargeback:'admin', pix:'admin', coordenacao:'admin', saintacademy:'admin'} },
+  supervisao: { admin:false, perms:{lentes:'equipe', pix:'equipe', coordenacao:'equipe', saintacademy:'equipe'} },
+  financeiro: { admin:false, perms:{chargeback:'equipe', saintacademy:'equipe'} },
+  suporte:    { admin:false, perms:{lentes:'equipe', saintacademy:'equipe'} },
+  nenhum:     { admin:false, perms:{} }
+};
+
+/* ===== Utilidades ===== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const S = { token:'', eu:null, pessoas:[], frames:{}, editando:null, rota:'' };
+
+function msg(el, texto, tipo){ const m=$(el); m.textContent=texto||''; m.className='msg'+(texto&&tipo?' '+tipo:''); }
+
+async function call(fn, ...args){
+  if(/COLE_AQUI/.test(API)) throw new Error('O link do servidor do Saint Center ainda não foi configurado.');
+  const corpo = JSON.stringify({fn, args});
+  let ult;
+  for(let t=0;t<3;t++){
+    try{
+      const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo});
+      const j = await r.json();
+      if(!j.ok){
+        const er = Object.assign(new Error(j.erro||'Erro inesperado.'),{servidor:true});
+        if(/grava[cç][oõ]es agora/i.test(er.message) && t<2){ ult=er; await new Promise(ok=>setTimeout(ok,1500+Math.random()*1500)); continue; }
+        throw er;
+      }
+      return j.resultado;
+    }catch(e){
+      if(e.servidor) throw e;
+      ult=e; await new Promise(ok=>setTimeout(ok,1200));
+    }
+  }
+  throw (ult && ult.servidor) ? ult : new Error('Sem conexão com o servidor. Verifique a internet e tente de novo.');
+}
+async function run(fn, ...args){
+  try{ return await call(fn, S.token, ...args); }
+  catch(e){
+    if(/sess[aã]o expirou|acesso est[aá] desativado/i.test(e.message)){ sairLocal(e.message); }
+    throw e;
+  }
+}
+
+function guardar(r){
+  S.token = r.token || S.token;
+  S.eu = r.usuario;
+  try{ localStorage.setItem('sc-token', S.token); localStorage.setItem('sc-user', JSON.stringify(S.eu)); }catch(_){}
+}
+function sairLocal(aviso){
+  S.token=''; S.eu=null; S.pessoas=[];
+  try{ localStorage.removeItem('sc-token'); localStorage.removeItem('sc-user'); }catch(_){}
+  Object.values(S.frames).forEach(f=>f.remove()); S.frames={};
+  mostrarLogin('entrar');
+  if(aviso) msg('mEntrar', aviso, 'erro');
+}
+
+/* ===== Login ===== */
+function mostrarLogin(qual){
+  $('vApp').hidden = true; $('vLogin').hidden = false; $('mCarregando').hidden = true;
+  ['fEntrar','fEsqueci','fNova','fPrimeira'].forEach(id => $(id).hidden = true);
+  const f = {entrar:'fEntrar', esqueci:'fEsqueci', nova:'fNova', primeira:'fPrimeira'}[qual];
+  $(f).hidden = false;
+  const primeiro = $(f).querySelector('input'); if(primeiro) setTimeout(()=>primeiro.focus(),30);
+  document.title = 'Saint Center · Saint Germain';
+}
+
+$('fEntrar').addEventListener('submit', async e => {
+  e.preventDefault();
+  const b = e.submitter || $('fEntrar').querySelector('button[type=submit]'); b.disabled = true; msg('mEntrar','Entrando…');
+  try{
+    const r = await call('entrar', $('lLogin').value, $('lSenha').value);
+    S.tempUsada = r.trocar ? $('lSenha').value : '';
+    guardar(r); $('lSenha').value=''; msg('mEntrar','');
+    if(r.trocar) mostrarLogin('nova'); else entrarApp();
+  }catch(er){ msg('mEntrar', er.message, 'erro'); }
+  b.disabled = false;
+});
+$('irEsqueci').onclick = () => { $('eId').value = $('lLogin').value; msg('mEsqueci',''); mostrarLogin('esqueci'); };
+document.querySelectorAll('[data-voltar]').forEach(b => b.onclick = () => mostrarLogin('entrar'));
+$('fEsqueci').addEventListener('submit', async e => {
+  e.preventDefault();
+  const b = $('fEsqueci').querySelector('button[type=submit]'); b.disabled = true; msg('mEsqueci','Enviando…');
+  try{ msg('mEsqueci', await call('esqueciSenha', $('eId').value), 'ok'); }
+  catch(er){ msg('mEsqueci', er.message, 'erro'); }
+  b.disabled = false;
+});
+$('fNova').addEventListener('submit', async e => {
+  e.preventDefault();
+  if($('nSenha').value !== $('nSenha2').value) return msg('mNova','As senhas não são iguais.','erro');
+  const b = $('fNova').querySelector('button[type=submit]'); b.disabled = true; msg('mNova','Salvando…');
+  try{
+    // a senha temporária usada no login fica guardada só na memória desta página
+    const r = await run('trocarSenha', S.tempUsada || '', $('nSenha').value);
+    guardar(r); $('nSenha').value = $('nSenha2').value = ''; S.tempUsada=''; entrarApp();
+  }catch(er){ msg('mNova', er.message, 'erro'); }
+  b.disabled = false;
+});
+$('cancelaNova').onclick = async () => { try{ await call('sair', S.token); }catch(_){} sairLocal(); };
+$('fPrimeira').addEventListener('submit', async e => {
+  e.preventDefault();
+  const b = $('fPrimeira').querySelector('button[type=submit]'); b.disabled = true; msg('mPrimeira','Criando…');
+  try{
+    const r = await call('criarPrimeiraAdmin', $('pNome').value, $('pLogin').value, $('pEmail').value, $('pSenha').value);
+    guardar(r); entrarApp();
+  }catch(er){ msg('mPrimeira', er.message, 'erro'); }
+  b.disabled = false;
+});
+
+/* ===== App ===== */
+const meus = () => MODULOS.filter(m => S.eu && S.eu.perms && S.eu.perms[m.k]);
+
+function entrarApp(){
+  $('vLogin').hidden = true; $('vApp').hidden = false;
+  $('euNome').textContent = S.eu.nome;
+  $('euCargo').textContent = S.eu.cargo || (S.eu.centerAdmin ? 'Administração' : '');
+  montarMenu(); montarInicio();
+  irPara(location.hash || '#/inicio');
+}
+
+function montarMenu(){
+  const lista = meus();
+  let h = `<a href="#/inicio" data-rota="#/inicio">Início</a>`;
+  AREAS.forEach(a => {
+    const ms = lista.filter(m => m.area === a);
+    if(!ms.length) return;
+    h += `<div class="grupo">${esc(a)}</div>`;
+    ms.forEach(m => h += `<a href="#/m/${m.k}" data-rota="#/m/${m.k}">${esc(m.nome)}${m.breve?'<span class="tag">Em breve</span>':''}</a>`);
+  });
+  if(S.eu.centerAdmin){
+    h += `<div class="grupo">Administração</div>
+      <a href="#/pessoas" data-rota="#/pessoas">Pessoas e acessos</a>
+      <a href="#/acessos" data-rota="#/acessos">Histórico de acessos</a>`;
+  }
+  $('menu').innerHTML = h;
+}
+
+function montarInicio(){
+  const d = new Date();
+  $('hoje').textContent = d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'});
+  const hora = d.getHours();
+  $('ola').textContent = (hora<12?'Bom dia':hora<18?'Boa tarde':'Boa noite') + ', ' + S.eu.nome.split(' ')[0] + '.';
+  const lista = meus();
+  if(!lista.length){
+    $('areas').innerHTML = `<div class="vazio">Você ainda não tem acesso a nenhum sistema.<br>Fale com a coordenação para liberar.</div>`;
+    return;
+  }
+  $('areas').innerHTML = AREAS.map(a => {
+    const ms = lista.filter(m => m.area === a);
+    if(!ms.length) return '';
+    return `<section class="area"><span class="k">${esc(a)}</span><div class="cards">` + ms.map(m => {
+      const nivel = m.niveis[S.eu.perms[m.k]] || '';
+      if(m.breve) return `<div class="card breve"><h3>${esc(m.nome)}</h3><p>${esc(m.desc)}</p>
+        <div class="pe"><span class="nivel">${esc(nivel)}</span><span class="abrir">Em breve</span></div></div>`;
+      return `<a class="card" href="#/m/${m.k}"><h3>${esc(m.nome)}</h3><p>${esc(m.desc)}</p>
+        <div class="pe"><span class="nivel">${esc(nivel)}</span><span class="abrir">Abrir →</span></div></a>`;
+    }).join('') + `</div></section>`;
+  }).join('');
+}
+
+function irPara(rota){
+  document.body.classList.remove('menu-aberto'); $('btnMenu').setAttribute('aria-expanded','false');
+  let alvo = 'inicio', mod = null;
+  const m = /^#\/m\/([a-z0-9]+)/.exec(rota);
+  if(m){ mod = MODULOS.find(x => x.k === m[1] && S.eu.perms[x.k]); alvo = (mod && !mod.breve) ? 'modulo' : 'inicio'; }
+  else if(rota === '#/pessoas' && S.eu.centerAdmin) alvo = 'pessoas';
+  else if(rota === '#/acessos' && S.eu.centerAdmin) alvo = 'acessos';
+  const efetiva = alvo==='modulo' ? '#/m/'+mod.k : '#/'+alvo;
+  if(location.hash !== efetiva) history.replaceState(null,'',efetiva);
+  S.rota = efetiva;
+  $('pgInicio').hidden = alvo!=='inicio'; $('pgModulo').hidden = alvo!=='modulo';
+  $('pgPessoas').hidden = alvo!=='pessoas'; $('pgAcessos').hidden = alvo!=='acessos';
+  document.querySelectorAll('#menu a').forEach(a => a.getAttribute('data-rota')===efetiva ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
+  if(alvo==='modulo') abrirModulo(mod);
+  if(alvo==='pessoas') carregarPessoas();
+  if(alvo==='acessos') carregarHist();
+  document.title = (alvo==='modulo' ? mod.nome : alvo==='pessoas' ? 'Pessoas e acessos' : alvo==='acessos' ? 'Histórico de acessos' : 'Início') + ' · Saint Center';
+}
+window.addEventListener('hashchange', () => { if(S.eu) irPara(location.hash); });
+
+function abrirModulo(m){
+  $('modTitulo').textContent = m.nome;
+  $('modNovaAba').href = m.url;
+  try{ localStorage.setItem('sc-user', JSON.stringify(S.eu)); localStorage.setItem('sc-token', S.token); }catch(_){}
+  Object.entries(S.frames).forEach(([k,f]) => f.hidden = k!==m.k);
+  if(!S.frames[m.k]){
+    const f = document.createElement('iframe');
+    f.title = m.nome; f.src = m.url + '?sc=1';
+    f.setAttribute('allow','clipboard-write');
+    $('frames').appendChild(f); S.frames[m.k] = f;
+  }
+}
+
+/* módulos avisam quando a sessão expira */
+window.addEventListener('message', async ev => {
+  if(ev.origin !== location.origin || !ev.data || ev.data.saintCenter !== 'sessao-expirou') return;
+  try{ guardar(Object.assign({token:S.token}, await run('eu'))); montarMenu(); montarInicio(); }catch(_){}
+});
+
+$('btnMenu').onclick = () => { const a = document.body.classList.toggle('menu-aberto'); $('btnMenu').setAttribute('aria-expanded', String(a)); };
+document.addEventListener('click', e => { if(document.body.classList.contains('menu-aberto') && !e.target.closest('aside') && !e.target.closest('#btnMenu')) document.body.classList.remove('menu-aberto'); });
+$('btnSair').onclick = async () => { try{ await call('sair', S.token); }catch(_){} sairLocal(); };
+
+/* ===== Minha senha ===== */
+$('btnMinhaSenha').onclick = () => { $('fSenha').reset(); msg('mSenha',''); $('dlgSenha').showModal(); };
+$('sCancelar').onclick = () => $('dlgSenha').close();
+$('fSenha').addEventListener('submit', async e => {
+  e.preventDefault();
+  if($('sNova').value !== $('sNova2').value) return msg('mSenha','As senhas não são iguais.','erro');
+  msg('mSenha','Salvando…');
+  try{ guardar(Object.assign({token:S.token}, await run('trocarSenha', $('sAtual').value, $('sNova').value))); msg('mSenha','Senha alterada.','ok'); setTimeout(()=>$('dlgSenha').close(),900); }
+  catch(er){ msg('mSenha', er.message, 'erro'); }
+});
+
+/* ===== Pessoas e acessos ===== */
+async function carregarPessoas(){
+  if(!S.pessoas.length) $('tabPessoas').innerHTML = `<div class="vazio">Carregando…</div>`;
+  try{ S.pessoas = await run('listarPessoas'); desenharPessoas(); }
+  catch(er){ $('tabPessoas').innerHTML = `<div class="vazio">${esc(er.message)}</div>`; }
+}
+function desenharPessoas(){
+  const q = norm($('busca').value), st = $('filtroStatus').value;
+  const lista = S.pessoas.filter(p => (st==='todos' || (st==='ativos') === p.ativo) &&
+    (!q || norm([p.nome,p.login,p.cargo,p.email].join(' ')).includes(q)));
+  if(!lista.length){ $('tabPessoas').innerHTML = `<div class="vazio">Nenhuma pessoa encontrada.</div>`; return; }
+  $('tabPessoas').innerHTML = `<div class="linha cabecalho"><span class="k">Pessoa</span><span class="k">Sistemas</span><span class="k">Status</span><span></span></div>` +
+    lista.map(p => {
+      const chips = MODULOS.filter(m => p.perms[m.k]).map(m => `<span class="chip${p.perms[m.k]==='admin'?' forte':''}">${esc(m.nome)} · ${esc(m.niveis[p.perms[m.k]])}</span>`).join('')
+        + (p.centerAdmin ? `<span class="chip forte">Saint Center · Administração</span>` : '');
+      const ult = p.ultimo ? 'Último acesso ' + new Date(p.ultimo).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : (p.convitePendente ? 'Aguardando primeiro acesso' : 'Nunca entrou');
+      return `<div class="linha">
+        <div><div class="nome">${esc(p.nome)}</div><div class="mut">${esc(p.login)}${p.cargo?' · '+esc(p.cargo):''}</div><div class="mut">${esc(ult)}</div></div>
+        <div class="chips">${chips || '<span class="mut">Sem sistemas</span>'}</div>
+        <div class="status${p.ativo?'':' off'}">${p.ativo?'Ativa':'Desativada'}</div>
+        <div class="acoes"><button type="button" class="ghost" data-editar="${esc(p.login)}">Editar</button></div>
+      </div>`;
+    }).join('');
+}
+$('busca').addEventListener('input', desenharPessoas);
+$('filtroStatus').addEventListener('change', desenharPessoas);
+$('tabPessoas').addEventListener('click', e => { const b = e.target.closest('[data-editar]'); if(b) abrirPessoa(S.pessoas.find(p => p.login === b.dataset.editar)); });
+$('btnNova').onclick = () => abrirPessoa(null);
+
+function desenharPerms(perms){
+  $('dpPerms').innerHTML = MODULOS.map(m => {
+    const v = perms[m.k] || '';
+    const op = (val, txt) => `<label><input type="radio" name="perm-${m.k}" value="${val}" ${v===val?'checked':''}><span>${esc(txt)}</span></label>`;
+    return `<div class="perm"><div class="n">${esc(m.nome)}<small>${esc(m.area)}${m.breve?' · em breve':''}</small></div>
+      <div class="seg" role="radiogroup" aria-label="${esc(m.nome)}">${op('','Sem acesso')}${op('equipe',m.niveis.equipe)}${op('admin',m.niveis.admin)}</div></div>`;
+  }).join('');
+}
+function abrirPessoa(p){
+  S.editando = p;
+  $('fPessoa').reset(); msg('mPessoa','');
+  $('dpTitulo').textContent = p ? p.nome : 'Nova pessoa';
+  $('dpK').textContent = p ? 'Editar cadastro' : 'Cadastro';
+  $('dpNome').value = p ? p.nome : ''; $('dpLogin').value = p ? p.login : '';
+  $('dpEmail').value = p ? p.email : ''; $('dpCargo').value = p ? p.cargo : '';
+  $('dpAdmin').checked = p ? p.centerAdmin : false; $('dpAtivo').checked = p ? p.ativo : true;
+  $('dpEnviarBox').hidden = !!p; $('dpEnviar').checked = !p;
+  $('dpSenha').placeholder = p ? 'Deixe vazio para manter' : 'Mínimo 6 caracteres';
+  $('dpReenviar').hidden = !p || !p.email;
+  desenharPerms(p ? p.perms : {});
+  $('dlgPessoa').showModal();
+}
+document.querySelectorAll('[data-modelo]').forEach(b => b.onclick = () => {
+  const m = MODELOS[b.dataset.modelo]; desenharPerms(m.perms); $('dpAdmin').checked = m.admin;
+  if(!$('dpCargo').value && b.dataset.modelo!=='nenhum') $('dpCargo').value = b.textContent.trim();
+});
+$('dpCancelar').onclick = () => $('dlgPessoa').close();
+$('dpLogin').addEventListener('input', e => { e.target.value = norm(e.target.value).replace(/[^a-z0-9._-]/g,''); });
+$('fPessoa').addEventListener('submit', async e => {
+  e.preventDefault();
+  const perms = {};
+  MODULOS.forEach(m => { const r = $('fPessoa').querySelector(`input[name="perm-${m.k}"]:checked`); if(r && r.value) perms[m.k] = r.value; });
+  const d = { loginOriginal: S.editando ? S.editando.login : '', nome:$('dpNome').value, login:$('dpLogin').value, email:$('dpEmail').value,
+    cargo:$('dpCargo').value, centerAdmin:$('dpAdmin').checked, ativo:$('dpAtivo').checked, perms,
+    senhaInicial:$('dpSenha').value, enviarEmail: !S.editando && $('dpEnviar').checked };
+  $('dpSalvar').disabled = true; msg('mPessoa','Salvando…');
+  try{
+    S.pessoas = await run('salvarPessoa', d);
+    desenharPessoas();
+    if(S.editando && S.editando.login === S.eu.login){ const r = await run('eu'); guardar(Object.assign({token:S.token}, r)); montarMenu(); montarInicio(); }
+    $('dlgPessoa').close();
+  }catch(er){ msg('mPessoa', er.message, 'erro'); }
+  $('dpSalvar').disabled = false;
+});
+$('dpReenviar').onclick = async () => {
+  msg('mPessoa','Enviando…');
+  try{ msg('mPessoa', await run('enviarAcesso', S.editando.login), 'ok'); carregarPessoas(); }
+  catch(er){ msg('mPessoa', er.message, 'erro'); }
+};
+
+/* ===== Histórico ===== */
+async function carregarHist(){
+  $('tabHist').innerHTML = `<div class="vazio">Carregando…</div>`;
+  try{
+    const h = await run('historicoAcessos', 300);
+    $('tabHist').innerHTML = !h.length ? `<div class="vazio">Nenhum registro ainda.</div>` :
+      `<div class="linha cabecalho"><span class="k">Data</span><span class="k">Pessoa</span><span class="k">Ação</span><span class="k">Detalhes</span></div>` +
+      h.map(r => `<div class="linha"><span class="mut">${esc(new Date(r.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}))}</span>
+        <span>${esc(r.nome)}</span><span>${esc(r.acao)}</span><span class="mut">${esc(r.detalhes)}</span></div>`).join('');
+  }catch(er){ $('tabHist').innerHTML = `<div class="vazio">${esc(er.message)}</div>`; }
+}
+$('btnAtuHist').onclick = carregarHist;
+
+/* ===== Início ===== */
+(async function iniciar(){
+  try{
+    const t = localStorage.getItem('sc-token');
+    if(t){
+      S.token = t;
+      const r = await call('eu', t);
+      guardar(Object.assign({token:t}, r));
+      if(r.trocar){ sairLocal('Entre de novo com a sua senha temporária para criar a nova senha.'); return; }
+      entrarApp(); return;
+    }
+  }catch(e){
+    if(!/sess[aã]o expirou|desativado/i.test(e.message)){ $('mCarregando').textContent = e.message; $('mCarregando').className='msg erro'; return; }
+    sairLocal();
+    return;
+  }
+  try{
+    const tem = await call('temPessoas');
+    mostrarLogin(tem ? 'entrar' : 'primeira');
+  }catch(e){ $('mCarregando').textContent = e.message; $('mCarregando').className='msg erro'; }
+})();
+</script>
+</body>
+</html>
