@@ -281,7 +281,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
       <label class="campo"><span class="k">E-mail</span><input id="dpEmail" type="email" placeholder="Usado no Esqueci minha senha"></label>
       <label class="campo"><span class="k">Cargo</span><input id="dpCargo" list="cargos" placeholder="ex.: Supervisão"></label>
     </div>
-    <datalist id="cargos"><option>Coordenação</option><option>Supervisão</option><option>Líder de Suporte</option><option>Suporte</option><option>Suporte Financeiro</option><option>Diretoria</option><option>Gerência</option></datalist>
+    <datalist id="cargos"><option>Coordenação</option><option>Supervisão</option><option>Líder de Suporte</option><option>Suporte</option><option>Suporte Financeiro</option><option>Financeiro</option><option>Diretoria</option><option>Gerência</option></datalist>
 
     <div>
       <div class="modelos"><span class="k">Modelos rápidos</span>
@@ -338,7 +338,7 @@ const MODULOS = [
     url:'https://saintgermainb-hub.github.io/saintacademy/', niveis:{equipe:'Acesso', admin:'Administração'} },
   { k:'lentes',       nome:'Fila de Lentes',        area:'Operação',         desc:'Receitas, DNP e ordens de serviço das lentes dos clientes.',
     url:'https://saintgermainb-hub.github.io/saintgermainlentes/', niveis:{equipe:'Equipe', admin:'Administração'} },
-  { k:'chargeback',   nome:'Chargebacks',           area:'Financeiro',       desc:'Registro das contestações, prazos de defesa e resultados.',
+  { k:'chargeback',   nome:'Chargebacks',           area:'Financeiro',       desc:'Sistema do time de Financeiro: contestações, prazos de defesa e resultados.',
     url:'https://saintgermainb-hub.github.io/saintgermainchargeback/', niveis:{equipe:'Equipe', admin:'Administração'} },
   { k:'coordenacao',  nome:'Coordenação de Equipe', area:'Gestão de Equipe', desc:'Escala 12x36, turnos, 1:1 e desenvolvimento do time.',
     url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} },
@@ -347,7 +347,7 @@ const MODULOS = [
 ];
 const AREAS = ['Treinamento','Operação','Financeiro','Gestão de Equipe']; // SaintAcademy sempre em primeiro: é onde a pessoa inicia e aprende
 const MODELOS = {
-  coordenacao:{ admin:true,  perms:{lentes:'admin', chargeback:'admin', coordenacao:'admin', acessos:'admin', saintacademy:'admin'} },
+  coordenacao:{ admin:true,  perms:{lentes:'admin', coordenacao:'admin', acessos:'admin', saintacademy:'admin'} },
   supervisao: { admin:false, perms:{lentes:'equipe', coordenacao:'equipe', acessos:'equipe', saintacademy:'equipe'} },
   financeiro: { admin:false, perms:{chargeback:'equipe', saintacademy:'equipe'} },
   suporte:    { admin:false, perms:{lentes:'equipe', saintacademy:'equipe'} },
