@@ -107,6 +107,10 @@ a.card:hover{border-color:var(--fg)}
 .linha .acoes{display:flex;gap:8px;justify-content:flex-end}
 .linha .acoes button{padding:8px 12px;font-size:10px}
 .hist .linha{grid-template-columns:150px minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr)}
+.sis .linha{grid-template-columns:minmax(0,1.4fr) minmax(0,1.8fr) 110px 210px}
+.sis .linha.oculto .nome,.sis .linha.oculto .mut{color:var(--g3)}
+textarea{font-family:var(--font);font-size:15px;border:1px solid var(--g3);background:var(--bg);color:var(--fg);padding:12px;border-radius:0;width:100%;resize:vertical;min-height:70px}
+textarea:focus{outline:none;border-color:var(--fg)}
 
 /* diálogo */
 dialog{border:1px solid var(--fg);padding:0;width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 40px);color:var(--fg);background:var(--bg)}
@@ -141,7 +145,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   main{grid-row:2}
   .conteudo{padding:28px 16px 60px}
   .cab h2{font-size:24px}
-  .linha,.hist .linha{grid-template-columns:1fr;gap:8px}
+  .linha,.hist .linha,.sis .linha{grid-template-columns:1fr;gap:8px}
   .linha.cabecalho{display:none}
   .linha .acoes{justify-content:flex-start}
   .grade2{grid-template-columns:1fr}
@@ -268,6 +272,18 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         <div class="tabela hist" id="tabHist"></div>
       </div>
     </div>
+
+    <div class="pagina" id="pgSistemas" hidden>
+      <div class="conteudo">
+        <div class="cab">
+          <div><span class="k">Administração</span><h2>Sistemas</h2>
+            <div class="sub">Você decide o que entra e o que sai do Saint Center. Sistema oculto some do menu de todos, sem perder as permissões — é só reativar.</div></div>
+          <button type="button" id="btnNovoSis">Novo sistema</button>
+        </div>
+        <div class="msg" id="mSistemas" role="status"></div>
+        <div class="tabela sis" id="tabSis"></div>
+      </div>
+    </div>
   </main>
 </section>
 
@@ -314,6 +330,36 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </form>
 </dialog>
 
+<dialog id="dlgSistema">
+  <form class="dlg" id="fSistema" method="dialog">
+    <div><span class="k" id="dsK">Sistema</span><h3 id="dsTitulo">Novo sistema</h3></div>
+    <div class="grade2">
+      <label class="campo"><span class="k">Nome</span><input id="dsNome" required placeholder="ex.: Reclame Aqui"></label>
+      <label class="campo"><span class="k">Área</span><input id="dsArea" list="areasLista" required placeholder="ex.: Operação"></label>
+    </div>
+    <datalist id="areasLista"></datalist>
+    <label class="campo"><span class="k">Descrição</span><textarea id="dsDesc" rows="2" placeholder="O que o time faz neste sistema"></textarea></label>
+    <label class="campo"><span class="k">Link do sistema</span><input id="dsUrl" type="url" placeholder="https://saintgermainb-hub.github.io/..."></label>
+    <div>
+      <span class="k">Situação no Saint Center</span>
+      <div class="seg" role="radiogroup" aria-label="Situação" style="margin-top:8px;width:max-content;max-width:100%">
+        <label><input type="radio" name="dsStatus" value="ativo" checked><span>Ativo</span></label>
+        <label><input type="radio" name="dsStatus" value="breve"><span>Em breve</span></label>
+        <label><input type="radio" name="dsStatus" value="oculto"><span>Oculto</span></label>
+      </div>
+    </div>
+    <div class="grade2">
+      <label class="campo"><span class="k">Nome do nível equipe</span><input id="dsNivEq" placeholder="Equipe"></label>
+      <label class="campo"><span class="k">Nome do nível administração</span><input id="dsNivAd" placeholder="Administração"></label>
+    </div>
+    <div class="msg" id="mSistema" role="status"></div>
+    <div class="rodape-dlg">
+      <button type="button" class="ghost" id="dsCancelar">Cancelar</button>
+      <button type="submit" id="dsSalvar">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgSenha">
   <form class="dlg" id="fSenha" method="dialog">
     <div><span class="k">Minha conta</span><h3>Trocar senha</h3></div>
@@ -332,20 +378,37 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 /* ===== Configuração ===== */
 const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwCgpSVpFrn3gvsS2HGniMxP14pNNmVIRXLGqP8_F3g/exec'; // link do app do Apps Script "Saint Center" (termina em /exec)
 
-/* Sistemas do Saint Center. Para incluir um novo, acrescente uma linha aqui. */
-const MODULOS = [
+/* Lista padrão dos sistemas. A lista que vale é a salva pela coordenação na tela Administração > Sistemas.
+   status: 'ativo' (aparece), 'breve' (aparece como Em breve), 'oculto' (fora do Saint Center, permissões guardadas). */
+const MODULOS_PADRAO = [
   { k:'saintacademy', nome:'SaintAcademy',          area:'Treinamento',      desc:'Onde tudo começa: a pessoa inicia e aprende aqui. Usa login próprio.',
     url:'https://saintgermainb-hub.github.io/saintacademy/', niveis:{equipe:'Acesso', admin:'Administração'} },
   { k:'lentes',       nome:'Fila de Lentes',        area:'Operação',         desc:'Receitas, DNP e ordens de serviço das lentes dos clientes.',
     url:'https://saintgermainb-hub.github.io/saintgermainlentes/', niveis:{equipe:'Equipe', admin:'Administração'} },
   { k:'chargeback',   nome:'Chargebacks',           area:'Financeiro',       desc:'Sistema do time de Financeiro: contestações, prazos de defesa e resultados.',
-    url:'https://saintgermainb-hub.github.io/saintgermainchargeback/', niveis:{equipe:'Equipe', admin:'Administração'} },
+    url:'https://saintgermainb-hub.github.io/saintgermainchargeback/', status:'oculto', niveis:{equipe:'Equipe', admin:'Administração'} },
   { k:'coordenacao',  nome:'Coordenação de Equipe', area:'Gestão de Equipe', desc:'Escala 12x36, turnos, 1:1 e desenvolvimento do time.',
-    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} },
+    url:'', status:'breve', niveis:{equipe:'Somente 1:1', admin:'Completo'} },
   { k:'acessos',      nome:'Acessos',               area:'Gestão de Equipe', desc:'Logins e senhas de cada posição do time, por sistema e por equipe.',
     url:'https://saintgermainb-hub.github.io/saintgermainacessos/', niveis:{equipe:'Ver e editar', admin:'Administração'} }
 ];
-const AREAS = ['Treinamento','Operação','Financeiro','Gestão de Equipe']; // SaintAcademy sempre em primeiro: é onde a pessoa inicia e aprende
+let SISTEMAS = prepararSistemas(MODULOS_PADRAO); // todos, inclusive ocultos
+let MODULOS = [];  // só os visíveis (ativos e em breve)
+let AREAS = [];    // ordem das áreas segue a ordem dos sistemas — SaintAcademy sempre em primeiro: é onde a pessoa inicia e aprende
+function prepararSistemas(lista){
+  return lista.map(m => Object.assign({ status:'ativo', desc:'', url:'' }, m, {
+    niveis: Object.assign({equipe:'Equipe', admin:'Administração'}, m.niveis || {}),
+    breve: (m.status || 'ativo') === 'breve'
+  }));
+}
+function aplicarSistemas(lista){
+  SISTEMAS = prepararSistemas(lista);
+  const sa = SISTEMAS.findIndex(m => m.k === 'saintacademy');
+  if(sa > 0) SISTEMAS.unshift(SISTEMAS.splice(sa,1)[0]);
+  MODULOS = SISTEMAS.filter(m => m.status !== 'oculto');
+  AREAS = [...new Set(MODULOS.map(m => m.area))];
+}
+aplicarSistemas(MODULOS_PADRAO);
 const MODELOS = {
   coordenacao:{ admin:true,  perms:{lentes:'admin', coordenacao:'admin', acessos:'admin', saintacademy:'admin'} },
   supervisao: { admin:false, perms:{lentes:'equipe', coordenacao:'equipe', acessos:'equipe', saintacademy:'equipe'} },
@@ -459,7 +522,12 @@ $('fPrimeira').addEventListener('submit', async e => {
 /* ===== App ===== */
 const meus = () => MODULOS.filter(m => S.eu && S.eu.perms && S.eu.perms[m.k]);
 
-function entrarApp(){
+async function carregarSistemas(){
+  try{ const l = await run('listarSistemas'); if(Array.isArray(l) && l.length) aplicarSistemas(l); S.sisServidor = true; }
+  catch(_){ S.sisServidor = false; } // servidor ainda sem a função: usa a lista padrão
+}
+async function entrarApp(){
+  await carregarSistemas();
   $('vLogin').hidden = true; $('vApp').hidden = false;
   $('euNome').textContent = S.eu.nome;
   $('euCargo').textContent = S.eu.cargo || (S.eu.centerAdmin ? 'Administração' : '');
@@ -479,7 +547,8 @@ function montarMenu(){
   if(S.eu.centerAdmin){
     h += `<div class="grupo">Administração</div>
       <a href="#/pessoas" data-rota="#/pessoas">Pessoas e acessos</a>
-      <a href="#/acessos" data-rota="#/acessos">Histórico de acessos</a>`;
+      <a href="#/acessos" data-rota="#/acessos">Histórico de acessos</a>
+      <a href="#/sistemas" data-rota="#/sistemas">Sistemas</a>`;
   }
   $('menu').innerHTML = h;
 }
@@ -514,16 +583,18 @@ function irPara(rota){
   if(m){ mod = MODULOS.find(x => x.k === m[1] && S.eu.perms[x.k]); alvo = (mod && !mod.breve) ? 'modulo' : 'inicio'; }
   else if(rota === '#/pessoas' && S.eu.centerAdmin) alvo = 'pessoas';
   else if(rota === '#/acessos' && S.eu.centerAdmin) alvo = 'acessos';
+  else if(rota === '#/sistemas' && S.eu.centerAdmin) alvo = 'sistemas';
   const efetiva = alvo==='modulo' ? '#/m/'+mod.k : '#/'+alvo;
   if(location.hash !== efetiva) history.replaceState(null,'',efetiva);
   S.rota = efetiva;
   $('pgInicio').hidden = alvo!=='inicio'; $('pgModulo').hidden = alvo!=='modulo';
-  $('pgPessoas').hidden = alvo!=='pessoas'; $('pgAcessos').hidden = alvo!=='acessos';
+  $('pgPessoas').hidden = alvo!=='pessoas'; $('pgAcessos').hidden = alvo!=='acessos'; $('pgSistemas').hidden = alvo!=='sistemas';
   document.querySelectorAll('#menu a').forEach(a => a.getAttribute('data-rota')===efetiva ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
   if(alvo==='modulo') abrirModulo(mod);
   if(alvo==='pessoas') carregarPessoas();
   if(alvo==='acessos') carregarHist();
-  document.title = (alvo==='modulo' ? mod.nome : alvo==='pessoas' ? 'Pessoas e acessos' : alvo==='acessos' ? 'Histórico de acessos' : 'Início') + ' · Saint Center';
+  if(alvo==='sistemas') desenharSistemas();
+  document.title = (alvo==='modulo' ? mod.nome : alvo==='pessoas' ? 'Pessoas e acessos' : alvo==='acessos' ? 'Histórico de acessos' : alvo==='sistemas' ? 'Sistemas' : 'Início') + ' · Saint Center';
 }
 window.addEventListener('hashchange', () => { if(S.eu) irPara(location.hash); });
 
@@ -621,6 +692,7 @@ $('dpLogin').addEventListener('input', e => { e.target.value = norm(e.target.val
 $('fPessoa').addEventListener('submit', async e => {
   e.preventDefault();
   const perms = {};
+  if(S.editando) SISTEMAS.filter(m => m.status === 'oculto' && S.editando.perms[m.k]).forEach(m => perms[m.k] = S.editando.perms[m.k]); // oculto não perde permissão
   MODULOS.forEach(m => { const r = $('fPessoa').querySelector(`input[name="perm-${m.k}"]:checked`); if(r && r.value) perms[m.k] = r.value; });
   const d = { loginOriginal: S.editando ? S.editando.login : '', nome:$('dpNome').value, login:$('dpLogin').value, email:$('dpEmail').value,
     cargo:$('dpCargo').value, centerAdmin:$('dpAdmin').checked, ativo:$('dpAtivo').checked, perms,
@@ -639,6 +711,88 @@ $('dpReenviar').onclick = async () => {
   try{ msg('mPessoa', await run('enviarAcesso', S.editando.login), 'ok'); carregarPessoas(); }
   catch(er){ msg('mPessoa', er.message, 'erro'); }
 };
+
+/* ===== Sistemas (o que entra e o que sai do Saint Center) ===== */
+const SIT = {ativo:'Ativo', breve:'Em breve', oculto:'Oculto'};
+function desenharSistemas(){
+  msg('mSistemas', S.sisServidor ? '' : 'O servidor do Saint Center ainda não foi atualizado para guardar a lista de sistemas. Você pode ver, mas as mudanças só salvam depois da atualização.', S.sisServidor ? '' : 'erro');
+  $('tabSis').innerHTML = `<div class="linha cabecalho"><span class="k">Sistema</span><span class="k">Descrição</span><span class="k">Situação</span><span></span></div>` +
+    SISTEMAS.map((m,i) => `<div class="linha${m.status==='oculto'?' oculto':''}">
+      <div><div class="nome">${esc(m.nome)}</div><div class="mut">${esc(m.area)}</div></div>
+      <div class="mut">${esc(m.desc)}</div>
+      <div class="status${m.status==='oculto'?' off':''}">${SIT[m.status]||''}</div>
+      <div class="acoes">
+        <button type="button" class="ghost" data-sobe="${i}" ${i===0?'disabled':''} aria-label="Subir ${esc(m.nome)}">↑</button>
+        <button type="button" class="ghost" data-desce="${i}" ${i===SISTEMAS.length-1?'disabled':''} aria-label="Descer ${esc(m.nome)}">↓</button>
+        <button type="button" class="ghost" data-alterna="${i}">${m.status==='oculto'?'Reativar':'Tirar'}</button>
+        <button type="button" class="ghost" data-editsis="${i}">Editar</button>
+      </div></div>`).join('');
+}
+function limparSis(m){ return { k:m.k, nome:m.nome, area:m.area, desc:m.desc||'', url:m.url||'', status:m.status||'ativo', niveis:{equipe:m.niveis.equipe, admin:m.niveis.admin} }; }
+async function salvarSistemas(nova, aviso){
+  const antes = SISTEMAS.map(limparSis);
+  try{
+    const l = await run('salvarSistemas', nova.map(limparSis));
+    aplicarSistemas(Array.isArray(l) && l.length ? l : nova);
+    montarMenu(); montarInicio(); desenharSistemas();
+    if(aviso) msg('mSistemas', aviso, 'ok');
+    return true;
+  }catch(er){
+    aplicarSistemas(antes); desenharSistemas();
+    msg('mSistemas', /desconhecida/i.test(er.message) ? 'O servidor do Saint Center ainda não foi atualizado para guardar a lista de sistemas.' : er.message, 'erro');
+    return false;
+  }
+}
+$('tabSis').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if(!b || b.disabled) return;
+  const l = SISTEMAS.map(limparSis);
+  if(b.dataset.sobe){ const i=+b.dataset.sobe; [l[i-1],l[i]]=[l[i],l[i-1]]; }
+  else if(b.dataset.desce){ const i=+b.dataset.desce; [l[i+1],l[i]]=[l[i],l[i+1]]; }
+  else if(b.dataset.alterna){
+    const m = l[+b.dataset.alterna];
+    if(m.status !== 'oculto' && !confirm(`Tirar "${m.nome}" do Saint Center?\n\nEle some do menu de todos. As permissões ficam guardadas e você pode reativar quando quiser.`)) return;
+    m.status = m.status === 'oculto' ? 'ativo' : 'oculto';
+  }
+  else if(b.dataset.editsis){ return abrirSistema(+b.dataset.editsis); }
+  else return;
+  b.disabled = true; msg('mSistemas','Salvando…');
+  await salvarSistemas(l, 'Saint Center atualizado.');
+});
+function abrirSistema(i){
+  S.sisEditando = (i === null || i === undefined) ? null : i;
+  const m = S.sisEditando === null ? null : SISTEMAS[i];
+  $('fSistema').reset(); msg('mSistema','');
+  $('dsTitulo').textContent = m ? m.nome : 'Novo sistema';
+  $('dsK').textContent = m ? 'Editar sistema' : 'Sistema';
+  $('areasLista').innerHTML = [...new Set(SISTEMAS.map(x => x.area))].map(a => `<option>${esc(a)}</option>`).join('');
+  $('dsNome').value = m ? m.nome : ''; $('dsArea').value = m ? m.area : '';
+  $('dsDesc').value = m ? m.desc : ''; $('dsUrl').value = m ? m.url : '';
+  $('dsNivEq').value = m ? m.niveis.equipe : 'Equipe'; $('dsNivAd').value = m ? m.niveis.admin : 'Administração';
+  const st = $('fSistema').querySelector(`input[name="dsStatus"][value="${m ? m.status : 'ativo'}"]`); if(st) st.checked = true;
+  $('dlgSistema').showModal();
+}
+$('btnNovoSis').onclick = () => abrirSistema(null);
+$('dsCancelar').onclick = () => $('dlgSistema').close();
+$('fSistema').addEventListener('submit', async e => {
+  e.preventDefault();
+  const status = ($('fSistema').querySelector('input[name="dsStatus"]:checked')||{}).value || 'ativo';
+  const url = $('dsUrl').value.trim();
+  if(status === 'ativo' && !url) return msg('mSistema','Para ficar ativo, o sistema precisa de um link. Sem link, use "Em breve".','erro');
+  const l = SISTEMAS.map(limparSis);
+  const dados = { nome:$('dsNome').value.trim(), area:$('dsArea').value.trim(), desc:$('dsDesc').value.trim(), url, status,
+    niveis:{ equipe:$('dsNivEq').value.trim() || 'Equipe', admin:$('dsNivAd').value.trim() || 'Administração' } };
+  if(S.sisEditando === null){
+    let base = norm(dados.nome).replace(/[^a-z0-9]/g,'').slice(0,24) || 'sistema', k = base, n = 2;
+    while(l.some(x => x.k === k)) k = base + (n++);
+    l.push(Object.assign({k}, dados));
+  } else {
+    Object.assign(l[S.sisEditando], dados);
+  }
+  $('dsSalvar').disabled = true; msg('mSistema','Salvando…');
+  if(await salvarSistemas(l, S.sisEditando === null ? `"${dados.nome}" incluído. Agora libere quem acessa em Pessoas e acessos.` : 'Saint Center atualizado.')) $('dlgSistema').close();
+  else msg('mSistema', $('mSistemas').textContent, 'erro');
+  $('dsSalvar').disabled = false;
+});
 
 /* ===== Histórico ===== */
 async function carregarHist(){
