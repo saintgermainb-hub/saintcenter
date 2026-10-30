@@ -343,12 +343,14 @@ const MODULOS = [
   { k:'pix',          nome:'Solicitações de PIX',   area:'Financeiro',       desc:'Pagamentos de free e testes do time.',
     url:'', breve:true, niveis:{equipe:'Solicitar', admin:'Gerenciar'} },
   { k:'coordenacao',  nome:'Coordenação de Equipe', area:'Gestão de Equipe', desc:'Escala 12x36, turnos, 1:1 e desenvolvimento do time.',
-    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} }
+    url:'', breve:true, niveis:{equipe:'Somente 1:1', admin:'Completo'} },
+  { k:'acessos',      nome:'Acessos',               area:'Gestão de Equipe', desc:'Logins e senhas de cada posição do time, por sistema e por equipe.',
+    url:'https://saintgermainb-hub.github.io/saintgermainacessos/', niveis:{equipe:'Ver e editar', admin:'Administração'} }
 ];
 const AREAS = ['Treinamento','Operação','Financeiro','Gestão de Equipe']; // SaintAcademy sempre em primeiro: é onde a pessoa inicia e aprende
 const MODELOS = {
-  coordenacao:{ admin:true,  perms:{lentes:'admin', chargeback:'admin', pix:'admin', coordenacao:'admin', saintacademy:'admin'} },
-  supervisao: { admin:false, perms:{lentes:'equipe', pix:'equipe', coordenacao:'equipe', saintacademy:'equipe'} },
+  coordenacao:{ admin:true,  perms:{lentes:'admin', chargeback:'admin', pix:'admin', coordenacao:'admin', acessos:'admin', saintacademy:'admin'} },
+  supervisao: { admin:false, perms:{lentes:'equipe', pix:'equipe', coordenacao:'equipe', acessos:'equipe', saintacademy:'equipe'} },
   financeiro: { admin:false, perms:{chargeback:'equipe', saintacademy:'equipe'} },
   suporte:    { admin:false, perms:{lentes:'equipe', saintacademy:'equipe'} },
   nenhum:     { admin:false, perms:{} }
