@@ -605,7 +605,7 @@ function abrirModulo(m){
   Object.entries(S.frames).forEach(([k,f]) => f.hidden = k!==m.k);
   if(!S.frames[m.k]){
     const f = document.createElement('iframe');
-    f.title = m.nome; f.src = m.url + '?sc=1';
+    f.title = m.nome; f.src = m.url + '?sc=1&v=' + Date.now(); // v= evita abrir versão antiga guardada no navegador
     f.setAttribute('allow','clipboard-write');
     $('frames').appendChild(f); S.frames[m.k] = f;
   }
