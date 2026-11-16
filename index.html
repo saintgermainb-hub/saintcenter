@@ -379,6 +379,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
   </form>
 </dialog>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" defer></script>
 <script>
 /* ===== Configuração ===== */
 const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwCgpSVpFrn3gvsS2HGniMxP14pNNmVIRXLGqP8_F3g/exec'; // link do app do Apps Script "Saint Center" (termina em /exec)
@@ -467,9 +468,28 @@ function guardar(r){
 function sairLocal(aviso){
   S.token=''; S.eu=null; S.pessoas=[];
   try{ localStorage.removeItem('sc-token'); localStorage.removeItem('sc-user'); }catch(_){}
+  saLimpar();
   Object.values(S.frames).forEach(f=>f.remove()); S.frames={};
   mostrarLogin('entrar');
   if(aviso) msg('mEntrar', aviso, 'erro');
+}
+
+/* ===== SaintAcademy entra junto com o Saint Center (mesmo login e mesma senha) ===== */
+const SA_CFG = { url:'https://noetdezbrtowyaxqyhsk.supabase.co', key:'sb_publishable_o1CEz4TcUfN2xuJdPIIUsQ_LU2-8htd', dominio:'@saintgermain.academy', chave:'saintacademy-auth' };
+function saLimpar(){ try{ Object.keys(localStorage).filter(k => k===SA_CFG.chave || k.startsWith(SA_CFG.chave+'-')).forEach(k => localStorage.removeItem(k)); }catch(_){} }
+async function saEntrar(login, senha, senhaNova){
+  try{
+    for(let i=0; i<40 && !(window.supabase && window.supabase.createClient); i++) await new Promise(r => setTimeout(r,100));
+    if(!window.supabase || !login || !senha) return false;
+    const u = norm(login).replace(/[^a-z0-9._-]/g,'');
+    const sb = window.supabase.createClient(SA_CFG.url, SA_CFG.key, {auth:{persistSession:true, autoRefreshToken:false, detectSessionInUrl:false, storageKey:SA_CFG.chave}});
+    let r = await sb.auth.signInWithPassword({email:u+SA_CFG.dominio, password:senha});
+    if(r.error && senhaNova){ r = await sb.auth.signInWithPassword({email:u+SA_CFG.dominio, password:senhaNova}); senhaNova = ''; }
+    if(r.error) return false;
+    if(senhaNova){ const up = await sb.auth.updateUser({password:senhaNova}); if(up.error) return false; }
+    try{ await sb.rpc('academy_senha_definida'); }catch(_){}
+    return true;
+  }catch(_){ return false; }
 }
 
 /* ===== Login ===== */
@@ -488,6 +508,8 @@ $('fEntrar').addEventListener('submit', async e => {
   try{
     const r = await call('entrar', $('lLogin').value, $('lSenha').value);
     S.tempUsada = r.trocar ? $('lSenha').value : '';
+    saLimpar();
+    if(!r.trocar) await saEntrar(r.usuario && r.usuario.login || $('lLogin').value, $('lSenha').value);
     guardar(r); $('lSenha').value=''; msg('mEntrar','');
     if(r.trocar) mostrarLogin('nova'); else entrarApp();
   }catch(er){ msg('mEntrar', er.message, 'erro'); }
@@ -509,6 +531,7 @@ $('fNova').addEventListener('submit', async e => {
   try{
     // a senha temporária usada no login fica guardada só na memória desta página
     const r = await run('trocarSenha', S.tempUsada || '', $('nSenha').value);
+    await saEntrar(r.usuario && r.usuario.login || (S.eu && S.eu.login), S.tempUsada || '', $('nSenha').value);
     guardar(r); $('nSenha').value = $('nSenha2').value = ''; S.tempUsada=''; entrarApp();
   }catch(er){ msg('mNova', er.message, 'erro'); }
   b.disabled = false;
@@ -633,7 +656,12 @@ $('fSenha').addEventListener('submit', async e => {
   e.preventDefault();
   if($('sNova').value !== $('sNova2').value) return msg('mSenha','As senhas não são iguais.','erro');
   msg('mSenha','Salvando…');
-  try{ guardar(Object.assign({token:S.token}, await run('trocarSenha', $('sAtual').value, $('sNova').value))); msg('mSenha','Senha alterada.','ok'); setTimeout(()=>$('dlgSenha').close(),900); }
+  try{
+    const atual = $('sAtual').value, nova = $('sNova').value;
+    guardar(Object.assign({token:S.token}, await run('trocarSenha', atual, nova)));
+    if(await saEntrar(S.eu.login, atual, nova) && S.frames.saintacademy){ S.frames.saintacademy.src = S.frames.saintacademy.src; }
+    msg('mSenha','Senha alterada.','ok'); setTimeout(()=>$('dlgSenha').close(),900);
+  }
   catch(er){ msg('mSenha', er.message, 'erro'); }
 });
 
