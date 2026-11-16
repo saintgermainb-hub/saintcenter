@@ -121,6 +121,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .modelos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .modelos button{padding:7px 11px;font-size:10px}
 .perms{border-top:1px solid var(--g3)}
+.samods{border:1px solid var(--g3);padding:14px 16px;display:grid;gap:10px}
+.samods .lista{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.samods .check{font-size:13px}
+@media (max-width:640px){.samods .lista{grid-template-columns:1fr}}
 .perm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--g3)}
 .perm .n{font-size:14px}
 .perm .n small{display:block;color:var(--g2);font-size:11px;letter-spacing:.06em;margin-top:2px}
@@ -311,6 +315,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
 
     <div class="perms" id="dpPerms"></div>
+    <div class="samods" id="dpSA" hidden></div>
 
     <label class="check"><input type="checkbox" id="dpAdmin"><span>Administra o Saint Center<br><span class="mut">Pode cadastrar pessoas e mudar permissões.</span></span></label>
     <label class="check"><input type="checkbox" id="dpAtivo" checked><span>Acesso ativo<br><span class="mut">Desmarque para bloquear a entrada sem perder o histórico.</span></span></label>
@@ -685,10 +690,11 @@ function abrirPessoa(p){
   $('dpSenha').placeholder = p ? 'Deixe vazio para manter' : 'Mínimo 6 caracteres';
   $('dpReenviar').hidden = !p || !p.email;
   desenharPerms(p ? p.perms : {});
+  SA.vez++; SA.mods = null; SA.atual = undefined; SA.sel = null; desenharSA();
   $('dlgPessoa').showModal();
 }
 document.querySelectorAll('[data-modelo]').forEach(b => b.onclick = () => {
-  const m = MODELOS[b.dataset.modelo]; desenharPerms(m.perms); $('dpAdmin').checked = m.admin;
+  const m = MODELOS[b.dataset.modelo]; desenharPerms(m.perms); $('dpAdmin').checked = m.admin; desenharSA();
   if(!$('dpCargo').value && b.dataset.modelo!=='nenhum') $('dpCargo').value = b.textContent.trim();
 });
 $('dpCancelar').onclick = () => $('dlgPessoa').close();
@@ -701,12 +707,34 @@ $('fPessoa').addEventListener('submit', async e => {
   const d = { loginOriginal: S.editando ? S.editando.login : '', nome:$('dpNome').value, login:$('dpLogin').value, email:$('dpEmail').value,
     cargo:$('dpCargo').value, centerAdmin:$('dpAdmin').checked, ativo:$('dpAtivo').checked, perms,
     senhaInicial:$('dpSenha').value, enviarEmail: !S.editando && $('dpEnviar').checked };
+  const saNivel = perms.saintacademy || '', saLogin = S.editando ? S.editando.login : d.login;
+  const saTocar = !!saNivel || !!(S.editando && S.editando.perms.saintacademy);
   $('dpSalvar').disabled = true; msg('mPessoa','Salvando…');
+  let api = null;
+  if(saTocar){
+    try{ api = await saApi(); }
+    catch(er){ if(saNivel){ msg('mPessoa', er.message, 'erro'); $('dpSalvar').disabled = false; return; } }
+  }
   try{
+    if(api && saNivel && !S.editando){
+      const ex = await api.buscar(saLogin);
+      if(!ex && String(d.senhaInicial||'').length < 6){ msg('mPessoa','Para criar o acesso ao SaintAcademy junto, preencha a senha inicial (mínimo 6 caracteres).','erro'); $('dpSalvar').disabled = false; return; }
+    }
     S.pessoas = await run('salvarPessoa', d);
     desenharPessoas();
     if(S.editando && S.editando.login === S.eu.login){ const r = await run('eu'); guardar(Object.assign({token:S.token}, r)); montarMenu(); montarInicio(); }
-    $('dlgPessoa').close();
+    let aviso = '';
+    if(api){
+      try{
+        const r = await api.sincronizar({usuario:saLogin, nome:d.nome, email:d.email, senha:d.senhaInicial, nivel:saNivel, ativo:d.ativo, modulos: SA.sel ? [...SA.sel] : null});
+        if(r.acao === 'sem-senha') aviso = 'Cadastro salvo no Saint Center. Para criar o acesso ao SaintAcademy, preencha a senha inicial e clique em Salvar de novo.';
+      }catch(er){ aviso = 'Cadastro salvo no Saint Center, mas o SaintAcademy não foi atualizado: ' + er.message; }
+    }
+    if(aviso){
+      S.editando = S.pessoas.find(p => p.login === d.login) || S.editando;
+      $('dpEnviarBox').hidden = true; $('dpEnviar').checked = false;
+      msg('mPessoa', aviso, 'erro');
+    } else $('dlgPessoa').close();
   }catch(er){ msg('mPessoa', er.message, 'erro'); }
   $('dpSalvar').disabled = false;
 });
@@ -715,6 +743,49 @@ $('dpReenviar').onclick = async () => {
   try{ msg('mPessoa', await run('enviarAcesso', S.editando.login), 'ok'); carregarPessoas(); }
   catch(er){ msg('mPessoa', er.message, 'erro'); }
 };
+
+/* ===== SaintAcademy: cadastro único (cria e atualiza o usuário do SaintAcademy junto) ===== */
+const SA = { vez:0, mods:null, atual:undefined, sel:null };
+async function saApi(){
+  const sis = SISTEMAS.find(x => x.k === 'saintacademy'); if(!sis) throw new Error('SaintAcademy não está cadastrado em Sistemas.');
+  if(!S.frames.saintacademy){
+    const f = document.createElement('iframe');
+    f.title = sis.nome; f.src = sis.url + '?sc=1&v=' + Date.now(); f.hidden = true;
+    f.setAttribute('allow','clipboard-write');
+    $('frames').appendChild(f); S.frames.saintacademy = f;
+  }
+  const f = S.frames.saintacademy;
+  for(let i=0;i<80;i++){
+    try{ const a = f.contentWindow && f.contentWindow.SA_API; if(a && a.pronto()) return a; }catch(_){}
+    await new Promise(r => setTimeout(r,250));
+  }
+  throw new Error('Não consegui conectar ao SaintAcademy. Abra o SaintAcademy no menu, entre com um usuário administrador e tente de novo.');
+}
+async function desenharSA(){
+  const box = $('dpSA'), vez = SA.vez;
+  const r = $('fPessoa').querySelector('input[name="perm-saintacademy"]:checked'), nivel = r ? r.value : '';
+  if(!nivel){ box.hidden = true; return; }
+  box.hidden = false;
+  if(!SA.mods || SA.atual === undefined){
+    box.innerHTML = `<span class="k">Módulos do SaintAcademy</span><p class="mut" style="margin:0">Carregando…</p>`;
+    try{
+      const api = await saApi();
+      if(!SA.mods) SA.mods = await api.modulos();
+      const atual = S.editando ? await api.buscar(S.editando.login) : null;
+      if(vez !== SA.vez) return;
+      SA.atual = atual;
+    }catch(er){ if(vez === SA.vez) box.innerHTML = `<span class="k">Módulos do SaintAcademy</span><p class="mut" style="margin:0">${esc(er.message)}</p>`; return; }
+  }
+  if(!SA.sel) SA.sel = new Set(SA.atual ? SA.atual.modulos : SA.mods.filter(m => m.padrao).map(m => m.id));
+  const a = SA.atual;
+  const info = a && a.coordenacao ? 'Este login é da coordenação no SaintAcademy e não é alterado por aqui.'
+    : a ? 'Já tem acesso ao SaintAcademy. Marque ou desmarque os módulos e salve.'
+    : 'O acesso ao SaintAcademy é criado junto, com o mesmo login e a senha inicial. No primeiro acesso a pessoa cria a própria senha.';
+  box.innerHTML = `<span class="k">Módulos do SaintAcademy</span><p class="mut" style="margin:0">${esc(info)}</p>
+    <div class="lista">${SA.mods.map(m => `<label class="check"><input type="checkbox" data-samod="${esc(m.id)}" ${SA.sel.has(m.id)?'checked':''} ${a&&a.coordenacao?'disabled':''}><span>${esc(m.nome)}${m.publicado?'':' <span class="mut">(rascunho)</span>'}</span></label>`).join('')}</div>`;
+}
+$('dpPerms').addEventListener('change', e => { if(e.target.name === 'perm-saintacademy') desenharSA(); });
+$('dpSA').addEventListener('change', e => { const id = e.target.dataset.samod; if(!id || !SA.sel) return; e.target.checked ? SA.sel.add(id) : SA.sel.delete(id); });
 
 /* ===== Sistemas (o que entra e o que sai do Saint Center) ===== */
 const SIT = {ativo:'Ativo', breve:'Em breve', oculto:'Oculto'};
