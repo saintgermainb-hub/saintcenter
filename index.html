@@ -739,15 +739,9 @@ $('fPessoa').addEventListener('submit', async e => {
   const saTocar = !!saNivel || !!(S.editando && S.editando.perms.saintacademy);
   $('dpSalvar').disabled = true; msg('mPessoa','Salvando…');
   let api = null;
-  if(saTocar){
-    try{ api = await saApi(); }
-    catch(er){ if(saNivel){ msg('mPessoa', er.message, 'erro'); $('dpSalvar').disabled = false; return; } }
-  }
+  let saErro = '';
+  if(saTocar){ try{ api = await saApi(); }catch(er){ saErro = er.message; } }
   try{
-    if(api && saNivel && !S.editando){
-      const ex = await api.buscar(saLogin);
-      if(!ex && String(d.senhaInicial||'').length < 6){ msg('mPessoa','Para criar o acesso ao SaintAcademy junto, preencha a senha inicial (mínimo 6 caracteres).','erro'); $('dpSalvar').disabled = false; return; }
-    }
     S.pessoas = await run('salvarPessoa', d);
     desenharPessoas();
     if(S.editando && S.editando.login === S.eu.login){ const r = await run('eu'); guardar(Object.assign({token:S.token}, r)); montarMenu(); montarInicio(); }
@@ -757,7 +751,7 @@ $('fPessoa').addEventListener('submit', async e => {
         const r = await api.sincronizar({usuario:saLogin, nome:d.nome, email:d.email, senha:d.senhaInicial, nivel:saNivel, ativo:d.ativo, modulos: SA.sel ? [...SA.sel] : null});
         if(r.acao === 'sem-senha') aviso = 'Cadastro salvo no Saint Center. Para criar o acesso ao SaintAcademy, preencha a senha inicial e clique em Salvar de novo.';
       }catch(er){ aviso = 'Cadastro salvo no Saint Center, mas o SaintAcademy não foi atualizado: ' + er.message; }
-    }
+    } else if(saNivel && saErro) aviso = 'Cadastro salvo no Saint Center. O SaintAcademy não foi atualizado: ' + saErro;
     if(aviso){
       S.editando = S.pessoas.find(p => p.login === d.login) || S.editando;
       $('dpEnviarBox').hidden = true; $('dpEnviar').checked = false;
@@ -783,7 +777,7 @@ async function saApi(){
     $('frames').appendChild(f); S.frames.saintacademy = f;
   }
   const f = S.frames.saintacademy;
-  for(let i=0;i<80;i++){
+  for(let i=0;i<40;i++){
     try{ const a = f.contentWindow && f.contentWindow.SA_API; if(a && a.pronto()) return a; }catch(_){}
     await new Promise(r => setTimeout(r,250));
   }
