@@ -205,7 +205,7 @@
         <div class="reu-t"><span class="k">1 · Pauta</span><span class="mut" id="rqPautaN"></span></div>
         <input id="rqPautaIn" placeholder="Tópico da pauta e Enter (pode colar vários)">
         <div class="reu-pauta" id="rqPauta"></div>
-        <p class="reu-dica">Marque cada tópico quando ele for tratado na reunião.</p>
+        <p class="reu-dica">Na reunião, toque em “A tratar” para marcar o tópico como “Tratado”.</p>
       </section>
       <section class="reu-col">
         <div class="reu-t"><span class="k">2 · Anotações da reunião</span><span class="mut" id="rqSalvo"></span></div>
@@ -250,7 +250,7 @@
     $('rqNotas').value = R.anotacoes || '';
     $('rqSalvo').textContent = R.anotacoes ? 'Salvo ✓' : '';
     $('rqPautaIn').value = '';
-    desenharPauta(); desenharAnexos();
+    desenharPauta(); desenharAnexos(); desenharLinha(); desenharAcomp();
     PLANO = []; $('rqResultado').hidden = true;
     if(R.resumo){ gerarResumo(); }
     $('dlgReuniao').showModal();
@@ -259,7 +259,7 @@
   function desenharPauta(){
     const p = R.pauta;
     $('rqPautaN').textContent = p.length ? p.filter(x => x.ok).length + ' de ' + p.length + ' tratados' : '';
-    $('rqPauta').innerHTML = p.length ? p.map((x,i) => `<div class="l ${x.ok?'ok':''}"><input type="checkbox" data-pok="${i}" ${x.ok?'checked':''} aria-label="Tratado"><input type="text" data-pt="${i}" value="${esc(x.t)}"><button type="button" data-pdel="${i}" aria-label="Remover">×</button></div>`).join('')
+    $('rqPauta').innerHTML = p.length ? p.map((x,i) => `<div class="l ${x.ok?'ok':''}"><button type="button" class="trat ${x.ok?'on':''}" data-ptog="${i}">${x.ok?'Tratado':'A tratar'}</button><input type="text" data-pt="${i}" value="${esc(x.t)}"><button type="button" data-pdel="${i}" aria-label="Remover">×</button></div>`).join('')
       : '<div class="vazio" style="padding:16px">Monte a pauta antes da reunião.</div>';
   }
   $('rqPautaIn').addEventListener('keydown', e => {
@@ -928,6 +928,100 @@
       salvar(); render(); toast(n + ' itens restaurados.');
     }
   });
+
+  /* ---------- Só pisca o que é para fazer: tarefas, ações e projetos ---------- */
+  const statusComAlinhamento = status;
+  status = function(it){ const s = statusComAlinhamento(it); return (s === 'atrasada' && it && it.tipo === 'objetivo') ? 'futura' : s; };
+
+  /* ---------- Reunião: Tratado / A tratar, acompanhamento do plano e linha do tempo ---------- */
+  const cssT = document.createElement('style');
+  cssT.textContent = `
+    .trat{font-size:9px;letter-spacing:.16em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:6px 10px;color:var(--g2);background:#fff;white-space:nowrap;min-width:86px;flex:none}
+    .trat.on{background:var(--pink);border-color:var(--pink);color:#fff}
+    .reu-pauta .l button.trat{font-size:9px;padding:6px 10px;color:var(--g2);line-height:1.2}
+    .reu-pauta .l button.trat.on{color:#fff}
+    .reu-linha{display:grid;gap:10px;border:1px solid #f4dcea;border-radius:16px;padding:12px 14px;background:#fff}
+    .lin{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:2px}
+    .enc{display:grid;gap:2px;text-align:left;border:1px solid #f2d3e6;border-radius:12px;padding:8px 12px;background:#fff;min-width:150px;flex:none}
+    .enc b{font-weight:400;font-size:12px;letter-spacing:.06em}
+    .enc span{font-size:11px;color:var(--g2)}
+    .enc i{font-style:normal;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--g3)}
+    .enc.feito i{color:var(--pink)}
+    .enc.atual{border-color:var(--pink);box-shadow:0 0 0 3px var(--rosa-claro)}
+    .lin .seta{align-self:center;width:28px;height:2px;background:linear-gradient(90deg,#ffb3dc,#c9a6ff);flex:none}
+    .lin-novo{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .lin-novo input{width:auto;padding:6px 10px;font-size:13px;border-radius:10px}
+    #rqAcomp .acp{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;border:1px solid #f4dcea;border-radius:12px;padding:8px 10px;background:#fff}
+    #rqAcomp .acp .t{font-size:13px;line-height:1.35}
+    #rqAcomp .acp .mut{font-size:11px}
+    #rqAcomp .acp.feito .t{text-decoration:line-through;color:var(--g2)}
+    #rqAcompLista{display:grid;gap:6px;max-height:320px;overflow:auto}
+  `;
+  document.head.appendChild(cssT);
+  document.querySelector('#dlgReuniao .reu-cab').insertAdjacentHTML('afterend', `<section class="reu-linha">
+    <div class="reu-t"><span class="k">Linha do tempo deste assunto</span><span class="mut" id="rqLinhaN"></span></div>
+    <div class="lin" id="rqLinha"></div>
+    <div class="lin-novo"><span class="mut" style="font-size:12px">Marcou outro encontro?</span>
+      <input type="date" id="rqProxData" aria-label="Data do próximo encontro"><input type="time" id="rqProxHora" aria-label="Hora do próximo encontro">
+      <button class="btn ghost min" id="rqProxOk">+ Agendar próximo encontro</button></div>
+  </section>`);
+  $('rqResultado').insertAdjacentHTML('afterend', `<section class="reu-col" id="rqAcomp" hidden style="margin-top:14px">
+    <div class="reu-t"><span class="k">Plano de ação · acompanhamento</span><span class="mut" id="rqAcompN"></span></div>
+    <div id="rqAcompLista"></div></section>`);
+
+  const serieDe = r => DB.itens.filter(i => ehReuniao(i) && (i.id === (r.serie || r.id) || (r.serie || r.id) === i.serie))
+    .sort((a, b) => ((a.data || '') + (a.hora || '')).localeCompare((b.data || '') + (b.hora || '')));
+  function desenharLinha(){
+    const s = serieDe(R);
+    $('rqLinhaN').textContent = s.length > 1 ? s.length + ' encontros' : '';
+    $('rqLinha').innerHTML = s.map((r, i) => {
+      const feito = r.feito || status(r) === 'passou';
+      return (i ? '<span class="seta"></span>' : '') + `<button type="button" class="enc ${r.id === R.id ? 'atual' : ''} ${feito ? 'feito' : ''}" data-enc="${r.id}">
+        <b>${i + 1}º encontro</b><span>${r.data ? esc(fmtData(r.data, true)) : 'Sem data'}${r.hora ? ' · ' + esc(r.hora) : ''}</span><i>${feito ? 'Realizado' : 'Agendado'}</i></button>`;
+    }).join('');
+    const d = somaDias(R.data ? deIso(R.data) : hojeD(), 1);
+    $('rqProxData').value = iso(d.getDay() === 6 ? somaDias(d, 2) : d.getDay() === 0 ? somaDias(d, 1) : d);
+    $('rqProxHora').value = R.hora || '';
+  }
+  $('rqLinha').addEventListener('click', e => {
+    const b = e.target.closest('[data-enc]'); if(!b || b.dataset.enc === R.id) return;
+    const it = DB.itens.find(i => i.id === b.dataset.enc); if(it){ if(tSalvar){ clearTimeout(tSalvar); salvar(); } abrirReuniao(it); }
+  });
+  $('rqProxOk').onclick = () => {
+    if(!$('rqProxData').value){ $('rqProxData').focus(); return; }
+    const serie = R.serie || R.id; R.serie = serie;
+    const n = serieDe(R).length + 1;
+    const base = R.titulo.replace(/\s*\(\d+º encontro\)\s*$/, '');
+    const pend = (R.pauta || []).filter(x => !x.ok).map(x => ({ t:x.t, ok:false }));
+    const novo = { id:uid(), titulo: base + ' (' + n + 'º encontro)', tipo:R.tipo, data:$('rqProxData').value, hora:$('rqProxHora').value, prioridade:R.prioridade, pessoa:R.pessoa || '',
+      notas:'', rec:'', sub:[], paiId:'', serie, pauta:[{ t:'Retomar o plano de ação do encontro anterior', ok:false }].concat(pend), anotacoes:'', anexos:[], feito:false, feitoEm:'', criadoEm:new Date().toISOString() };
+    DB.itens.push(novo); salvar(); render(); desenharLinha();
+    toast(n + 'º encontro agendado para ' + fmtData(novo.data, true) + (novo.hora ? ' às ' + novo.hora : '') + '. A pauta já leva o que ficou a tratar.');
+  };
+
+  function desenharAcomp(){
+    const ids = new Set(serieDe(R).map(r => r.id));
+    const enc = {}; serieDe(R).forEach((r, i) => enc[r.id] = (i + 1) + 'º encontro');
+    const acoes = DB.itens.filter(i => ids.has(i.origem) && !ehReuniao(i)).sort((a, b) => (a.feito - b.feito) || ordem(a, b));
+    $('rqAcomp').hidden = !acoes.length;
+    const feitas = acoes.filter(a => a.feito).length;
+    $('rqAcompN').textContent = acoes.length ? feitas + ' de ' + acoes.length + ' feitas' : '';
+    $('rqAcompLista').innerHTML = acoes.map(a => `<div class="acp ${clsSt(a)} ${a.feito ? 'feito' : ''}">
+      <button type="button" class="trat ${a.feito ? 'on' : ''}" data-acp="${a.id}">${a.feito ? 'Feito' : 'Em aberto'}</button>
+      <div><div class="t">${esc(a.titulo)}</div><div class="mut">${[a.pessoa || nome, a.data ? 'prazo ' + fmtData(a.data) : 'sem prazo', ids.size > 1 ? enc[a.origem] : ''].filter(Boolean).map(esc).join(' · ')}</div></div></div>`).join('');
+  }
+  $('rqAcompLista').addEventListener('click', e => {
+    const b = e.target.closest('[data-acp]'); if(!b) return;
+    const it = DB.itens.find(i => i.id === b.dataset.acp); if(it){ concluir(it); desenharAcomp(); }
+  });
+  // pauta: Tratado / A tratar
+  $('rqPauta').addEventListener('click', e => {
+    const b = e.target.closest('[data-ptog]'); if(!b) return;
+    const x = R.pauta[+b.dataset.ptog]; if(!x) return;
+    x.ok = !x.ok; desenharPauta(); salvarDepois();
+  });
+  const salvarPlanoOriginal = $('rqSalvar').onclick;
+  $('rqSalvar').onclick = function(){ salvarPlanoOriginal.call(this); desenharAcomp(); desenharLinha(); };
 
   render();
 })();
