@@ -259,21 +259,21 @@
   function desenharPauta(){
     const p = R.pauta;
     $('rqPautaN').textContent = p.length ? p.filter(x => x.ok).length + ' de ' + p.length + ' tratados' : '';
-    $('rqPauta').innerHTML = p.length ? p.map((x,i) => `<div class="l ${x.ok?'ok':''}"><button type="button" class="trat ${x.ok?'on':''}" data-ptog="${i}">${x.ok?'Tratado':'A tratar'}</button><input type="text" data-pt="${i}" value="${esc(x.t)}"><button type="button" data-pdel="${i}" aria-label="Remover">×</button></div>`).join('')
+    $('rqPauta').innerHTML = p.length ? p.map((x,i) => `<div class="l ${x.ok?'ok':''} ${ehNovoPauta(x)?'novo':''}"><button type="button" class="trat ${x.ok?'on':''}" data-ptog="${i}">${x.ok?'Tratado':'A tratar'}</button><input type="text" data-pt="${i}" value="${esc(x.t)}"><span class="orig-enc">${ehNovoPauta(x) ? 'Novo · ' : ''}${ordemEncontro(x.enc)}</span><button type="button" data-pdel="${i}" aria-label="Remover">×</button></div>`).join('')
       : '<div class="vazio" style="padding:16px">Monte a pauta antes da reunião.</div>';
   }
   $('rqPautaIn').addEventListener('keydown', e => {
     if(e.key !== 'Enter') return;
     e.preventDefault();
     const novos = e.target.value.split('\n').map(t => t.replace(/^[\s\-•*\d.)]+/, '').trim()).filter(Boolean);
-    novos.forEach(t => R.pauta.push({ t, ok:false }));
+    novos.forEach(t => R.pauta.push({ t, ok:false, enc:R.id }));
     e.target.value = ''; desenharPauta(); salvarDepois();
   });
   $('rqPautaIn').addEventListener('paste', e => {
     const txt = (e.clipboardData || window.clipboardData).getData('text');
     if(!txt.includes('\n')) return;
     e.preventDefault();
-    txt.split('\n').map(t => t.replace(/^[\s\-•*\d.)]+/, '').trim()).filter(Boolean).forEach(t => R.pauta.push({ t, ok:false }));
+    txt.split('\n').map(t => t.replace(/^[\s\-•*\d.)]+/, '').trim()).filter(Boolean).forEach(t => R.pauta.push({ t, ok:false, enc:R.id }));
     desenharPauta(); salvarDepois();
   });
   $('rqPauta').addEventListener('input', e => {
@@ -339,8 +339,8 @@
     const bl = (tit, l) => l.length ? '\n' + tit + '\n' + l.map(x => '• ' + x).join('\n') + '\n' : '';
     const plano = PLANO.filter(a => a.incluir || a.salvo);
     return 'RESUMO DA REUNIÃO\n' + R.titulo + '\n' + [R.data ? fmtData(R.data, true) : '', R.hora, R.pessoa].filter(Boolean).join(' · ') + '\n'
-      + bl('PAUTA TRATADA', p.filter(x => x.ok).map(x => x.t))
-      + bl('PAUTA PENDENTE', p.filter(x => !x.ok).map(x => x.t))
+      + bl('PAUTA TRATADA', p.filter(x => x.ok).map(rotPauta))
+      + bl('PAUTA PENDENTE', p.filter(x => !x.ok).map(rotPauta))
       + bl('PONTOS DISCUTIDOS', PONTOS)
       + bl('DECISÕES', DECISOES)
       + bl('ANEXOS', (R.anexos || []).map(a => a.nome))
@@ -526,7 +526,7 @@
     desfazerUso(a);
     const ls = linhasDoTexto(a.texto);
     if(uso === 'pauta'){
-      topicosDoTexto(a.texto).filter(t => norm(t) !== norm(a.nome.replace(/\.[a-z0-9]+$/i, '')) && !R.pauta.some(x => norm(x.t) === norm(t))).forEach(t => R.pauta.push({ t, ok:false, de:a.id }));
+      topicosDoTexto(a.texto).filter(t => norm(t) !== norm(a.nome.replace(/\.[a-z0-9]+$/i, '')) && !R.pauta.some(x => norm(x.t) === norm(t))).forEach(t => R.pauta.push({ t, ok:false, de:a.id, enc:R.id }));
       a.uso = 'pauta';
     } else if(uso === 'resolutiva' && ls.length){
       a.add = ls.join('\n');
@@ -992,11 +992,11 @@
     const serie = R.serie || R.id; R.serie = serie;
     const n = serieDe(R).length + 1;
     const base = R.titulo.replace(/\s*\(\d+º encontro\)\s*$/, '');
-    const pend = (R.pauta || []).filter(x => !x.ok).map(x => ({ t:x.t, ok:false }));
+    const pend = (R.pauta || []).filter(x => !/^retomar o plano de acao/.test(norm(x.t))).map(x => ({ t:x.t, ok:!!x.ok, enc: x.enc || serie }));
     const novo = { id:uid(), titulo: base + ' (' + n + 'º encontro)', tipo:R.tipo, data:$('rqProxData').value, hora:$('rqProxHora').value, prioridade:R.prioridade, pessoa:R.pessoa || '',
       notas:'', rec:'', sub:[], paiId:'', serie, pauta:[{ t:'Retomar o plano de ação do encontro anterior', ok:false }].concat(pend), anotacoes:'', anexos:[], feito:false, feitoEm:'', criadoEm:new Date().toISOString() };
     DB.itens.push(novo); salvar(); render(); desenharLinha();
-    toast(n + 'º encontro agendado para ' + fmtData(novo.data, true) + (novo.hora ? ' às ' + novo.hora : '') + '. A pauta já leva o que ficou a tratar.');
+    toast(n + 'º encontro agendado para ' + fmtData(novo.data, true) + (novo.hora ? ' às ' + novo.hora : '') + '. A pauta segue com os tópicos anteriores; o que você incluir lá aparece como novo.');
   };
 
   function desenharAcomp(){
@@ -1083,6 +1083,36 @@
     $('iData').value = v === 'hoje' ? iso(hojeD()) : iso(somaDias($('iData').value ? deIso($('iData').value) : hojeD(), +v));
     atualizarGoogle();
   });
+
+  /* ---------- Pauta: o que é novo neste encontro (café clarinho) e origem de cada tópico ---------- */
+  const cssO = document.createElement('style');
+  cssO.textContent = `
+    .reu-pauta .l.novo input[type=text]{background:#f7f0e8;border-color:#e8d9c6}
+    .reu-pauta .l .orig-enc{display:none;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#a38b70;white-space:nowrap}
+    .reu-pauta.ver-origem .l .orig-enc{display:inline}
+    .mini-orig{font-size:9px;letter-spacing:.14em;text-transform:uppercase;border:1px solid #e8d9c6;border-radius:999px;padding:3px 8px;color:#a38b70;background:#fff;margin-left:8px}
+    .mini-orig[aria-pressed="true"]{background:#f7f0e8;color:#7d6650}
+    .reu-pauta-leg{font-size:11px;color:#a38b70;margin:0}
+    .reu-pauta-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;background:#f7f0e8;border:1px solid #e8d9c6;vertical-align:-1px;margin-right:4px}
+  `;
+  document.head.appendChild(cssO);
+  $('rqPautaN').insertAdjacentHTML('afterend', '<button type="button" class="mini-orig" id="rqVerOrigem" aria-pressed="false" title="Mostrar de qual encontro veio cada tópico">origem</button>');
+  $('rqPauta').insertAdjacentHTML('afterend', '<p class="reu-pauta-leg" id="rqPautaLeg" hidden><i></i>Novo neste encontro</p>');
+  $('rqVerOrigem').onclick = () => {
+    const on = $('rqVerOrigem').getAttribute('aria-pressed') !== 'true';
+    $('rqVerOrigem').setAttribute('aria-pressed', String(on));
+    $('rqPauta').classList.toggle('ver-origem', on);
+  };
+  function ordemEncontro(id){ const s = serieDe(R); const i = s.findIndex(r => r.id === id); return (i < 0 ? 1 : i + 1) + 'º encontro'; }
+  function ehNovoPauta(x){ const s = serieDe(R); return !!x.enc && x.enc === R.id && s.length > 1 && s[0].id !== R.id; }
+  function rotPauta(x){ return x.t + (ehNovoPauta(x) ? ' (novo neste encontro)' : ''); }
+  const desenharPautaBase = desenharPauta;
+  desenharPauta = function(){
+    desenharPautaBase();
+    const n = (R.pauta || []).filter(ehNovoPauta).length;
+    $('rqPautaLeg').hidden = !n;
+    if(n) $('rqPautaN').textContent += ' · ' + n + (n === 1 ? ' novo' : ' novos');
+  };
 
   render();
 })();
