@@ -250,7 +250,7 @@
     $('rqNotas').value = R.anotacoes || '';
     $('rqSalvo').textContent = R.anotacoes ? 'Salvo ✓' : '';
     $('rqPautaIn').value = '';
-    desenharPauta();
+    desenharPauta(); desenharAnexos();
     PLANO = []; $('rqResultado').hidden = true;
     if(R.resumo){ gerarResumo(); }
     $('dlgReuniao').showModal();
@@ -324,6 +324,7 @@
       + bl('PAUTA PENDENTE', p.filter(x => !x.ok).map(x => x.t))
       + bl('PONTOS DISCUTIDOS', PONTOS)
       + bl('DECISÕES', DECISOES)
+      + bl('ANEXOS', (R.anexos || []).map(a => a.nome))
       + (plano.length ? '\nPLANO DE AÇÃO\n' + plano.map((a,i) => (i+1) + '. ' + a.titulo + ' — ' + (a.pessoa || nome) + ' — ' + (a.data ? ddmm(a.data) + (a.hora ? ' ' + a.hora : '') : 'sem prazo')).join('\n') + '\n' : '');
   }
 
@@ -409,6 +410,232 @@
       toast('Dê um nome e o horário. Depois clique na reunião para abrir pauta e anotações.');
     };
   }
+
+  /* ---------- Anexos na reunião: arquivos, fotos e prints (Ctrl+V) ---------- */
+  const LIBS = {
+    pdf: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    pdfWorker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+    docx: 'https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js',
+    xlsx: 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    ocr: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'
+  };
+  const libsCarregadas = {};
+  const usarLib = url => libsCarregadas[url] || (libsCarregadas[url] = new Promise((ok, erro) => {
+    const s = document.createElement('script'); s.src = url; s.onload = ok;
+    s.onerror = () => { delete libsCarregadas[url]; erro(new Error('Sem internet para ler este arquivo agora. Ele ficou guardado.')); };
+    document.head.appendChild(s);
+  }));
+
+  // os arquivos ficam no navegador (IndexedDB), separados da agenda
+  let dbAnexos = null;
+  const abrirDBA = () => dbAnexos || (dbAnexos = new Promise((ok, erro) => {
+    const r = indexedDB.open('sg-agenda-anexos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('arquivos');
+    r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error);
+  }));
+  const guardarArq = async (id, blob) => { const db = await abrirDBA(); return new Promise((ok, erro) => { const tx = db.transaction('arquivos', 'readwrite'); tx.objectStore('arquivos').put(blob, id); tx.oncomplete = ok; tx.onerror = () => erro(tx.error); }); };
+  const lerArq = async id => { const db = await abrirDBA(); return new Promise((ok, erro) => { const r = db.transaction('arquivos').objectStore('arquivos').get(id); r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error); }); };
+  const apagarArq = async id => { const db = await abrirDBA(); db.transaction('arquivos', 'readwrite').objectStore('arquivos').delete(id); };
+
+  async function lerImagem(fonte, progresso){
+    await usarLib(LIBS.ocr);
+    const r = await Tesseract.recognize(fonte, 'por', { logger: m => { if(m.status === 'recognizing text' && progresso) progresso(Math.round(m.progress * 100)); } });
+    return r.data.text;
+  }
+  async function lerPdf(blob, progresso){
+    await usarLib(LIBS.pdf);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
+    const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
+    let txt = '';
+    for(let p = 1; p <= pdf.numPages; p++){
+      const c = await (await pdf.getPage(p)).getTextContent();
+      txt += c.items.map(i => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
+      if(progresso) progresso(Math.round(p / pdf.numPages * 100));
+    }
+    if(txt.replace(/\s/g, '').length > 20) return txt;
+    // PDF escaneado: lê as páginas como foto (até 3)
+    let out = '';
+    for(let p = 1; p <= Math.min(3, pdf.numPages); p++){
+      const pg = await pdf.getPage(p), vp = pg.getViewport({ scale: 2 });
+      const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+      await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      out += await lerImagem(cv, progresso) + '\n';
+    }
+    return out;
+  }
+  async function extrairTexto(blob, nomeArq, progresso){
+    const ext = (String(nomeArq).split('.').pop() || '').toLowerCase(), tipo = blob.type || '';
+    if(tipo.startsWith('image/')) return lerImagem(blob, progresso);
+    if(tipo === 'application/pdf' || ext === 'pdf') return lerPdf(blob, progresso);
+    if(ext === 'docx'){ await usarLib(LIBS.docx); return (await mammoth.extractRawText({ arrayBuffer: await blob.arrayBuffer() })).value; }
+    if(['xlsx', 'xls', 'ods'].includes(ext)){ await usarLib(LIBS.xlsx); const wb = XLSX.read(await blob.arrayBuffer()); return wb.SheetNames.map(n => XLSX.utils.sheet_to_csv(wb.Sheets[n], { FS: ' · ' })).join('\n'); }
+    if(tipo.startsWith('text/') || ['txt', 'md', 'csv', 'tsv', 'json', 'html', 'htm'].includes(ext)){
+      let t = await blob.text();
+      if(/html?/.test(ext) || tipo === 'text/html'){ const d = document.createElement('div'); d.innerHTML = t; t = d.innerText; }
+      return t;
+    }
+    return null;
+  }
+
+  // pauta ou resolutiva (pontos acordados)?
+  const RX_EH_PAUTA = /\b(pautas?|agenda|topicos|assuntos|itens a tratar|a discutir|a tratar|ordem do dia|apresentar)\b/g;
+  const RX_EH_RESOL = /\b(ata|resolutiv\w*|decid\w*|acordad\w*|definid\w*|combinad\w*|aprovad\w*|ficou|encaminhamentos?|proximos passos|responsave(l|is)|prazos?|deliberad\w*)\b/g;
+  function linhasDoTexto(t){
+    return String(t || '').replace(/\r/g, '').split('\n')
+      .flatMap(l => l.length > 220 ? l.split(/(?<=[.;!?])\s+/) : [l])
+      .map(l => l.replace(/^[\s\-–—•*·▪►✓✔☐☑|]+/, '').replace(/^\d{1,2}[.)]\s+/, '').replace(/\s{2,}/g, ' ').trim())
+      .filter(l => l.length >= 3 && /[A-Za-zÀ-ÿ]{3}/.test(l))
+      .filter(l => !/^((pautas?|agenda|ata)( d[aeo] reuniao)?|resumo|topicos|assuntos|participantes|data|local|horario|resolutiva|pontos acordados)\s*:?\s*$/.test(norm(l)))
+      .slice(0, 60);
+  }
+  function sugerirUso(texto){
+    const n = norm(texto);
+    const p = (n.match(RX_EH_PAUTA) || []).length, r = (n.match(RX_EH_RESOL) || []).length;
+    if(r > p) return 'resolutiva';
+    if(p > r) return 'pauta';
+    return (R.feito || status(R) === 'passou') ? 'resolutiva' : 'pauta';
+  }
+  function desfazerUso(a){
+    if(a.uso === 'pauta') R.pauta = (R.pauta || []).filter(x => x.de !== a.id);
+    if(a.uso === 'resolutiva' && a.add){
+      R.anotacoes = (R.anotacoes || '').replace('\n' + a.add, '').replace(a.add, '').trim();
+      $('rqNotas').value = R.anotacoes;
+    }
+    a.uso = 'guardar'; a.add = '';
+  }
+  function aplicarUso(a, uso){
+    desfazerUso(a);
+    const ls = linhasDoTexto(a.texto);
+    if(uso === 'pauta'){
+      ls.filter(t => !R.pauta.some(x => norm(x.t) === norm(t))).forEach(t => R.pauta.push({ t, ok:false, de:a.id }));
+      a.uso = 'pauta';
+    } else if(uso === 'resolutiva' && ls.length){
+      a.add = ls.join('\n');
+      R.anotacoes = (R.anotacoes ? R.anotacoes.replace(/\s+$/, '') + '\n' : '') + a.add;
+      $('rqNotas').value = R.anotacoes;
+      a.uso = 'resolutiva';
+    }
+    desenharPauta(); desenharAnexos(); salvarDepois();
+  }
+
+  const cssA = document.createElement('style');
+  cssA.textContent = `
+    .reu-anx{border:1px dashed #f0b9d9;border-radius:16px;padding:12px 14px;background:var(--rosa-bg);display:grid;gap:10px}
+    .reu-anx.sobre{border-color:var(--pink);background:#ffe4f3}
+    .reu-anx .topo{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .reu-anx .topo .mut{font-size:12px}
+    .anx-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+    .anx{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;background:#fff;border:1px solid #f4dcea;border-radius:12px;padding:8px}
+    .anx-th{width:64px;height:64px;border-radius:9px;background:#f7eef4;display:grid;place-items:center;overflow:hidden;cursor:pointer;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--g1);border:0}
+    .anx-th img{width:100%;height:100%;object-fit:cover}
+    .anx-info{display:grid;gap:4px;min-width:0;align-content:start}
+    .anx-info b{font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .anx-info .mut{font-size:11px}
+    .anx-bt{display:flex;flex-wrap:wrap;gap:4px}
+    .anx-bt button{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px;color:var(--g2);background:#fff}
+    .anx-bt button[aria-pressed="true"]{background:var(--pink);border-color:var(--pink);color:#fff}
+    .anx-bt button:disabled{opacity:.4;cursor:default}
+    .anx pre{grid-column:1/-1;white-space:pre-wrap;font-family:var(--font);font-size:12px;line-height:1.5;max-height:180px;overflow:auto;background:var(--rosa-bg);border-radius:8px;padding:8px;margin:0;color:var(--g1)}
+  `;
+  document.head.appendChild(cssA);
+  document.querySelector('#dlgReuniao .reu-acoes').insertAdjacentHTML('beforebegin', `<section class="reu-anx" id="rqAnexos">
+    <div class="topo">
+      <div><span class="k">Anexos · documentos, fotos e prints</span><br><span class="mut">Arraste aqui, clique em “Anexar” ou cole um print com Ctrl+V. Eu leio e coloco na pauta ou nos pontos acordados.</span></div>
+      <label class="btn ghost min" style="cursor:pointer">Anexar<input type="file" id="rqArq" multiple hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.html"></label>
+    </div>
+    <div class="anx-lista" id="rqAnxLista"></div>
+  </section>`);
+
+  const urlsAnexo = {};
+  const ehImg = a => /^image\//.test(a.tipo);
+  function estadoAnexo(a){
+    if(a.estado === 'lendo') return 'Lendo… ' + (a.pct ? a.pct + '%' : '');
+    if(a.estado === 'erro' || a.estado === 'guardado') return a.erro || 'Guardado.';
+    if(a.estado === 'vazio') return 'Guardado. Não encontrei texto para ler.';
+    const n = (R.pauta || []).filter(x => x.de === a.id).length;
+    if(a.uso === 'pauta') return 'Lido · ' + n + (n === 1 ? ' tópico entrou' : ' tópicos entraram') + ' na pauta';
+    if(a.uso === 'resolutiva') return 'Lido · entrou nas anotações como pontos acordados';
+    return 'Lido · só guardado';
+  }
+  function desenharAnexos(){
+    if(!R) return;
+    const l = R.anexos || [];
+    $('rqAnxLista').innerHTML = l.map(a => `<div class="anx" data-aid="${a.id}">
+      <button class="anx-th" data-anx-abrir="${a.id}" title="Abrir">${ehImg(a) ? '<img alt="">' : esc((a.nome.split('.').pop() || 'arq').slice(0, 4))}</button>
+      <div class="anx-info"><b title="${esc(a.nome)}">${esc(a.nome)}</b><span class="mut" data-anx-st="${a.id}">${esc(estadoAnexo(a))}</span>
+        <div class="anx-bt">
+          <button data-anx-uso="pauta" aria-pressed="${a.uso === 'pauta'}" ${a.texto ? '' : 'disabled'}>Pauta</button>
+          <button data-anx-uso="resolutiva" aria-pressed="${a.uso === 'resolutiva'}" ${a.texto ? '' : 'disabled'}>Resolutiva</button>
+          <button data-anx-uso="guardar" aria-pressed="${a.uso === 'guardar'}">Só guardar</button>
+          <button data-anx-ver ${a.texto ? '' : 'disabled'}>Ver texto</button>
+          <button data-anx-rm>Remover</button>
+        </div></div>
+      <pre hidden>${esc(a.texto)}</pre></div>`).join('');
+    l.filter(ehImg).forEach(async a => {
+      try{
+        if(!urlsAnexo[a.id]){ const b = await lerArq(a.id); if(!b) return; urlsAnexo[a.id] = URL.createObjectURL(b); }
+        const img = $('rqAnxLista').querySelector(`[data-anx-abrir="${a.id}"] img`); if(img) img.src = urlsAnexo[a.id];
+      }catch(_){}
+    });
+  }
+  function atualizarEstado(a){ const el = document.querySelector(`[data-anx-st="${a.id}"]`); if(el) el.textContent = estadoAnexo(a); }
+
+  async function adicionarAnexos(arquivos){
+    if(!R || !arquivos.length) return;
+    if(!Array.isArray(R.anexos)) R.anexos = [];
+    const reuniao = R;
+    for(const f of arquivos){
+      if(f.size > 25 * 1024 * 1024){ toast(f.name + ': acima de 25 MB.'); continue; }
+      const print = !f.name || /^image\.(png|jpe?g)$/i.test(f.name);
+      const nomeA = print ? 'Print ' + new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '') + '.png' : f.name;
+      const a = { id: uid(), nome: nomeA, tipo: f.type || '', tamanho: f.size, em: new Date().toISOString(), texto: '', uso: 'guardar', estado: 'lendo', pct: 0 };
+      try{ await guardarArq(a.id, f); }
+      catch(_){ toast('Não consegui guardar ' + nomeA + ' neste navegador.'); continue; }
+      reuniao.anexos.push(a); salvar();
+      if(reuniao === R) desenharAnexos();
+      extrairTexto(f, nomeA, pct => { a.pct = pct; atualizarEstado(a); })
+        .then(t => {
+          if(t === null){ a.estado = 'guardado'; a.erro = 'Guardado. Este tipo de arquivo eu não consigo ler.'; }
+          else { a.texto = String(t).replace(/ /g, ' ').slice(0, 20000).trim(); a.estado = a.texto ? 'lido' : 'vazio'; }
+          if(a.texto && reuniao === R && $('dlgReuniao').open){ aplicarUso(a, sugerirUso(a.texto)); toast(a.uso === 'pauta' ? 'Li “' + nomeA + '” e coloquei na pauta.' : 'Li “' + nomeA + '” e coloquei nos pontos acordados.'); }
+          else { salvar(); if(reuniao === R) desenharAnexos(); }
+        })
+        .catch(e => { a.estado = 'erro'; a.erro = (e && e.message) || 'Não consegui ler. O arquivo ficou guardado.'; salvar(); if(reuniao === R) desenharAnexos(); });
+    }
+  }
+
+  $('rqArq').addEventListener('change', e => { adicionarAnexos([...e.target.files]); e.target.value = ''; });
+  // Ctrl+V de print ou arquivo em qualquer parte da tela da reunião
+  $('dlgReuniao').addEventListener('paste', e => {
+    const fs = [...(e.clipboardData && e.clipboardData.files || [])];
+    if(!fs.length) return;
+    e.preventDefault(); e.stopPropagation();
+    adicionarAnexos(fs);
+  }, true);
+  const zona = $('rqAnexos');
+  ['dragenter', 'dragover'].forEach(ev => $('dlgReuniao').addEventListener(ev, e => { if([...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files')){ e.preventDefault(); zona.classList.add('sobre'); } }));
+  ['dragleave', 'drop'].forEach(ev => $('dlgReuniao').addEventListener(ev, () => zona.classList.remove('sobre')));
+  $('dlgReuniao').addEventListener('drop', e => { const fs = [...(e.dataTransfer && e.dataTransfer.files || [])]; if(fs.length){ e.preventDefault(); adicionarAnexos(fs); } });
+
+  $('rqAnxLista').addEventListener('click', async e => {
+    const card = e.target.closest('[data-aid]'); if(!card) return;
+    const a = (R.anexos || []).find(x => x.id === card.dataset.aid); if(!a) return;
+    const uso = e.target.closest('[data-anx-uso]');
+    if(uso){ const u = uso.dataset.anxUso; if(u === 'guardar'){ desfazerUso(a); desenharPauta(); desenharAnexos(); salvarDepois(); } else aplicarUso(a, u); return; }
+    if(e.target.closest('[data-anx-ver]')){ const pre = card.querySelector('pre'); pre.hidden = !pre.hidden; return; }
+    if(e.target.closest('[data-anx-abrir]')){
+      try{ const b = await lerArq(a.id); if(!b){ toast('Arquivo não encontrado neste navegador.'); return; } window.open(urlsAnexo[a.id] || (urlsAnexo[a.id] = URL.createObjectURL(b)), '_blank'); }catch(_){ toast('Não consegui abrir o arquivo.'); }
+      return;
+    }
+    const rm = e.target.closest('[data-anx-rm]');
+    if(rm){
+      if(rm.dataset.conf !== '1'){ rm.dataset.conf = '1'; rm.textContent = 'Confirmar'; setTimeout(() => { rm.dataset.conf = ''; rm.textContent = 'Remover'; }, 3000); return; }
+      R.anexos = R.anexos.filter(x => x.id !== a.id);
+      apagarArq(a.id).catch(() => {});
+      if(urlsAnexo[a.id]){ URL.revokeObjectURL(urlsAnexo[a.id]); delete urlsAnexo[a.id]; }
+      salvar(); desenharAnexos(); toast('Anexo removido. O que já tinha ido para a pauta e as anotações continua lá.');
+    }
+  });
 
   render();
 })();
