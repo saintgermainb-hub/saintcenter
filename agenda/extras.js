@@ -290,8 +290,8 @@
     PONTOS = []; DECISOES = [];
     // seções do texto: "O que decidimos", "Próximos passos", "Pontos discutidos"…
     const HDR_DEC = /^(o que (foi )?decidi(mos|do)|decisoes|decisao|decidido|ficou decidido|deliberacoes|resolutiva|pontos acordados|acordos|o que foi acordado)\s*:?$/;
-    const HDR_ACAO = /^(proximos passos|proximas acoes|acoes|plano de acao|encaminhamentos|tarefas|pendencias|a fazer|to ?do|responsaveis)\s*:?$/;
-    const HDR_NOTA = /^(contexto|pontos discutidos|discutido|observacoes|notas|o que foi discutido|assuntos tratados|resumo)\s*:?$/;
+    const HDR_ACAO = /^(proximos passos|proximas (acoes|etapas)|acoes|plano de acao|encaminhamentos|tarefas|pendencias|a fazer|o que fazer|to ?do|responsaveis( e prazos)?|prazos e responsaveis|pontos a validar.{0,40})\s*:?$/;
+    const HDR_NOTA = /^(contexto|diagnostico|pontos discutidos|discutido|observacoes|notas|o que foi discutido|assuntos tratados|resumo|o que a reuniao (confirmou|mostrou|levantou)|como (deve )?funciona(r)?|enquanto .{3,60}|sistema \d+\b.{0,80})\s*:?$/;
     const limpa = l => l.replace(/^[\s\-–—•*·▪►✓✔☐☑]+/, '').replace(/^\d{1,2}[.)]\s+/, '').trim();
     const livres = [], daAcao = [];
     let secao = '';
@@ -300,9 +300,11 @@
       if(/^(resumo|ata)( d[aeo])? reuniao\b/.test(n) && n.length < 80) return;
       if(HDR_DEC.test(n)){ secao = 'dec'; return; }
       if(HDR_ACAO.test(n)){ secao = 'acao'; return; }
-      if(HDR_NOTA.test(n)){ secao = 'nota'; return; }
-      if(secao === 'dec'){ DECISOES.push(limpa(l)); return; }
-      if(secao === 'nota'){ PONTOS.push(limpa(l)); return; }
+      if(HDR_NOTA.test(n)){ secao = 'nota'; if(/^sistema \d/.test(n)) PONTOS.push('▸ ' + l); return; }
+      if(/^o que\s+quem\s+prazo$/.test(n)) return;
+      const sub = l.length < 45 && !/[.:;!?,]$/.test(l) && !/\d/.test(l) && !RX_VERBO.test(n);
+      if(secao === 'dec'){ DECISOES.push(sub ? '▸ ' + l : limpa(l)); return; }
+      if(secao === 'nota'){ PONTOS.push(sub ? '▸ ' + l : limpa(l)); return; }
       (secao === 'acao' ? daAcao : livres).push(l);
     });
     const linhas = livres.concat(daAcao.length ? ['Próximos passos:'].concat(daAcao) : []);
