@@ -637,5 +637,110 @@
     }
   });
 
+  /* ---------- Anexos no organizador ("Jogue aqui. Eu organizo.") ---------- */
+  const cssC = document.createElement('style');
+  cssC.textContent = `
+    .cap-anx{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:10px}
+    .cap-anx .mut{font-size:12px}
+    .cap-lista{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+    .cap-lista:empty{display:none}
+    .cap-chip{display:inline-flex;align-items:center;gap:8px;max-width:100%;background:#fff;border:1px solid #f2d3e6;border-radius:999px;padding:5px 6px 5px 12px;font-size:12px}
+    .cap-chip b{font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+    .cap-chip .mut{font-size:11px;white-space:nowrap}
+    .cap-chip button{color:var(--g2);font-size:15px;padding:0 6px;line-height:1}
+    .captura.sobre textarea{border-color:var(--pink);background:#ffe4f3}
+    .nota .anx-ent{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .nota .anx-ent button{font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 10px;color:var(--g1);background:var(--rosa-bg)}
+  `;
+  document.head.appendChild(cssC);
+  const capTxt = $('txtCaptura'), capCard = document.querySelector('.captura');
+  capTxt.insertAdjacentHTML('afterend', `<div class="cap-anx">
+    <label class="btn ghost min" style="cursor:pointer">Anexar documento<input type="file" id="capArq" multiple hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.html"></label>
+    <span class="mut">PDF, Word, Excel, foto ou print. Também dá para arrastar aqui ou colar com Ctrl+V.</span>
+    <div class="cap-lista" id="capLista"></div></div>`);
+
+  let PEND = [];
+  function desenharPend(){
+    $('capLista').innerHTML = PEND.map((p, i) => `<span class="cap-chip"><b title="${esc(p.nome)}">${esc(p.nome)}</b><span class="mut">${
+      p.estado === 'lendo' ? 'Lendo… ' + (p.pct ? p.pct + '%' : '') : p.estado === 'lido' ? 'Lido ✓' : p.estado === 'vazio' ? 'Sem texto, só guardado' : esc(p.erro || 'Só guardado')
+    }</span><button type="button" data-cap-rm="${i}" aria-label="Tirar anexo">×</button></span>`).join('');
+  }
+  function lerParaOrganizador(arquivos){
+    arquivos.forEach(f => {
+      if(f.size > 25 * 1024 * 1024){ toast(f.name + ': acima de 25 MB.'); return; }
+      const print = !f.name || /^image\.(png|jpe?g)$/i.test(f.name);
+      const p = { file:f, nome: print ? 'Print ' + new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '') + '.png' : f.name, estado:'lendo', pct:0, texto:'', add:'' };
+      PEND.push(p); desenharPend();
+      extrairTexto(f, p.nome, pct => { p.pct = pct; desenharPend(); })
+        .then(t => {
+          if(t === null){ p.estado = 'guardado'; p.erro = 'Não sei ler este tipo, só guardado'; desenharPend(); return; }
+          p.texto = String(t).replace(/ /g, ' ').replace(/\r/g, '').split('\n').map(l => l.replace(/\s{2,}/g, ' ').trim()).filter(Boolean).slice(0, 200).join('\n');
+          p.estado = p.texto ? 'lido' : 'vazio';
+          if(p.texto && PEND.includes(p)){
+            p.add = p.texto;
+            capTxt.value = (capTxt.value.trim() ? capTxt.value.replace(/\s+$/, '') + '\n' : '') + p.add;
+            toast('Li “' + p.nome + '”. O texto está no campo: confira e clique em Organizar na agenda.');
+          }
+          desenharPend();
+        })
+        .catch(e => { p.estado = 'erro'; p.erro = (e && e.message) || 'Não consegui ler, só guardado'; desenharPend(); });
+    });
+  }
+  $('capArq').addEventListener('change', e => { lerParaOrganizador([...e.target.files]); e.target.value = ''; });
+  capTxt.addEventListener('paste', e => {
+    const fs = [...(e.clipboardData && e.clipboardData.files || [])];
+    if(!fs.length) return;
+    e.preventDefault(); lerParaOrganizador(fs);
+  });
+  ['dragenter', 'dragover'].forEach(ev => capCard.addEventListener(ev, e => { if([...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files')){ e.preventDefault(); capCard.classList.add('sobre'); } }));
+  ['dragleave', 'drop'].forEach(ev => capCard.addEventListener(ev, () => capCard.classList.remove('sobre')));
+  capCard.addEventListener('drop', e => { const fs = [...(e.dataTransfer && e.dataTransfer.files || [])]; if(fs.length){ e.preventDefault(); lerParaOrganizador(fs); } });
+  $('capLista').addEventListener('click', e => {
+    const b = e.target.closest('[data-cap-rm]'); if(!b) return;
+    const p = PEND[+b.dataset.capRm];
+    if(p && p.add) capTxt.value = capTxt.value.replace('\n' + p.add, '').replace(p.add, '').trim();
+    PEND.splice(+b.dataset.capRm, 1); desenharPend();
+  });
+
+  // ao salvar na agenda, os arquivos ficam guardados na Caixa de entrada e nas reuniões criadas
+  const salvarPrevOriginal = $('pvSalvar').onclick;
+  $('pvSalvar').onclick = function(){
+    const antes = new Set(DB.itens.map(i => i.id)), antesE = new Set(DB.entradas.map(x => x.id));
+    salvarPrevOriginal.call(this);
+    const novos = DB.itens.filter(i => !antes.has(i.id));
+    const ent = DB.entradas.find(x => !antesE.has(x.id));
+    const lista = PEND.slice(); PEND = []; desenharPend();
+    if(!novos.length || !lista.length) return;
+    (async () => {
+      const destinos = [ent].concat(novos.filter(ehReuniao)).filter(Boolean);
+      for(const p of lista){
+        for(const d of destinos){
+          const id = uid();
+          try{ await guardarArq(id, p.file); }catch(_){ continue; }
+          if(!Array.isArray(d.anexos)) d.anexos = [];
+          d.anexos.push({ id, nome:p.nome, tipo:p.file.type || '', tamanho:p.file.size, em:new Date().toISOString(), texto:p.texto, uso:'guardar', estado: p.texto ? 'lido' : (p.estado === 'vazio' ? 'vazio' : 'guardado'), erro: p.texto ? '' : (p.erro || '') });
+        }
+      }
+      salvar(); render();
+    })();
+  };
+  const limparOriginal = $('btnLimparCap').onclick;
+  $('btnLimparCap').onclick = function(){ PEND = []; desenharPend(); limparOriginal.call(this); };
+
+  // Caixa de entrada: mostra e abre os arquivos de cada texto
+  const renderEntradaOriginal = renderEntrada;
+  renderEntrada = function(){
+    renderEntradaOriginal();
+    DB.entradas.filter(x => (x.anexos || []).length).forEach(x => {
+      const bt = document.querySelector(`[data-reorg="${x.id}"]`); if(!bt) return;
+      const nota = bt.closest('.nota'); if(!nota || nota.querySelector('.anx-ent')) return;
+      nota.insertAdjacentHTML('beforeend', '<div class="anx-ent">' + x.anexos.map(a => `<button type="button" data-ent-anx="${a.id}" title="Abrir">📎 ${esc(a.nome)}</button>`).join('') + '</div>');
+    });
+  };
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-ent-anx]'); if(!b) return;
+    try{ const f = await lerArq(b.dataset.entAnx); if(!f){ toast('Arquivo não encontrado neste navegador.'); return; } window.open(URL.createObjectURL(f), '_blank'); }catch(_){ toast('Não consegui abrir o arquivo.'); }
+  });
+
   render();
 })();
