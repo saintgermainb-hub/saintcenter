@@ -287,8 +287,25 @@
   // "Time Avant vai liberar…", "Meiriene ficou de enviar…" → responsável
   const quemVai = t => { const m = /^(?:[-•*]\s*)?([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ÿ&]+(?:\s(?:[A-ZÁÉÍÓÚÂÊÔÃÕÇ&][\wÀ-ÿ&]*))*)\s+(?:vai|vão|fica de|ficou de|ficaram de|precisa)\s/.exec(String(t||'').trim()); return m && !/^(eu|nós|nos|a gente)$/i.test(m[1]) ? m[1] : ''; };
   function gerarResumo(){
-    const linhas = (R.anotacoes || '').split('\n').map(l => l.trim()).filter(Boolean);
     PONTOS = []; DECISOES = [];
+    // seções do texto: "O que decidimos", "Próximos passos", "Pontos discutidos"…
+    const HDR_DEC = /^(o que (foi )?decidi(mos|do)|decisoes|decisao|decidido|ficou decidido|deliberacoes|resolutiva|pontos acordados|acordos|o que foi acordado)\s*:?$/;
+    const HDR_ACAO = /^(proximos passos|proximas acoes|acoes|plano de acao|encaminhamentos|tarefas|pendencias|a fazer|to ?do|responsaveis)\s*:?$/;
+    const HDR_NOTA = /^(contexto|pontos discutidos|discutido|observacoes|notas|o que foi discutido|assuntos tratados|resumo)\s*:?$/;
+    const limpa = l => l.replace(/^[\s\-–—•*·▪►✓✔☐☑]+/, '').replace(/^\d{1,2}[.)]\s+/, '').trim();
+    const livres = [], daAcao = [];
+    let secao = '';
+    (R.anotacoes || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+      const n = norm(l).replace(/[*_#]/g, '').trim();
+      if(/^(resumo|ata)( d[aeo])? reuniao\b/.test(n) && n.length < 80) return;
+      if(HDR_DEC.test(n)){ secao = 'dec'; return; }
+      if(HDR_ACAO.test(n)){ secao = 'acao'; return; }
+      if(HDR_NOTA.test(n)){ secao = 'nota'; return; }
+      if(secao === 'dec'){ DECISOES.push(limpa(l)); return; }
+      if(secao === 'nota'){ PONTOS.push(limpa(l)); return; }
+      (secao === 'acao' ? daAcao : livres).push(l);
+    });
+    const linhas = livres.concat(daAcao.length ? ['Próximos passos:'].concat(daAcao) : []);
     const jaSalvas = new Set(DB.itens.filter(i => i.origem === R.id).map(i => norm(i.titulo)));
     const res = linhas.length ? organizar('Reunião base hoje\n' + linhas.join('\n')) : [];
     const acoes = [];
@@ -452,7 +469,7 @@
       txt += c.items.map(i => i.str + (i.hasEOL ? '\n' : ' ')).join('') + '\n';
       if(progresso) progresso(Math.round(p / pdf.numPages * 100));
     }
-    if(txt.replace(/\s/g, '').length > 20) return txt;
+    if(txt.replace(/\s/g, '').length > 20) return refluir(txt);
     // PDF escaneado: lê as páginas como foto (até 3)
     let out = '';
     for(let p = 1; p <= Math.min(3, pdf.numPages); p++){
@@ -486,7 +503,7 @@
       .map(l => l.replace(/^[\s\-–—•*·▪►✓✔☐☑|]+/, '').replace(/^\d{1,2}[.)]\s+/, '').replace(/\s{2,}/g, ' ').trim())
       .filter(l => l.length >= 3 && /[A-Za-zÀ-ÿ]{3}/.test(l))
       .filter(l => !/^((pautas?|agenda|ata)( d[aeo] reuniao)?|resumo|topicos|assuntos|participantes|data|local|horario|resolutiva|pontos acordados)\s*:?\s*$/.test(norm(l)))
-      .slice(0, 60);
+      .slice(0, 150);
   }
   function sugerirUso(texto){
     const n = norm(texto);
@@ -507,7 +524,7 @@
     desfazerUso(a);
     const ls = linhasDoTexto(a.texto);
     if(uso === 'pauta'){
-      ls.filter(t => !R.pauta.some(x => norm(x.t) === norm(t))).forEach(t => R.pauta.push({ t, ok:false, de:a.id }));
+      topicosDoTexto(a.texto).filter(t => norm(t) !== norm(a.nome.replace(/\.[a-z0-9]+$/i, '')) && !R.pauta.some(x => norm(x.t) === norm(t))).forEach(t => R.pauta.push({ t, ok:false, de:a.id }));
       a.uso = 'pauta';
     } else if(uso === 'resolutiva' && ls.length){
       a.add = ls.join('\n');
@@ -740,6 +757,174 @@
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-ent-anx]'); if(!b) return;
     try{ const f = await lerArq(b.dataset.entAnx); if(!f){ toast('Arquivo não encontrado neste navegador.'); return; } window.open(URL.createObjectURL(f), '_blank'); }catch(_){ toast('Não consegui abrir o arquivo.'); }
+  });
+
+  /* ---------- Texto de PDF: junta as linhas quebradas no meio da frase ---------- */
+  function refluir(t){
+    const out = [];
+    String(t || '').replace(/\r/g, '').split('\n').map(l => l.trim()).forEach(l => {
+      if(!l){ if(out.length && out[out.length - 1] !== '') out.push(''); return; }
+      const ant = out.length ? out[out.length - 1] : '';
+      const novoItem = /^([☐☑✓✔•\-–—*·▪►]|\d{1,2}[.)]\s)/.test(l);
+      if(ant && !/[.:;!?]$/.test(ant) && !novoItem && (/^[a-zà-ÿ0-9(“"'%]/.test(l) || ant.length >= 70)) out[out.length - 1] = ant + ' ' + l;
+      else out.push(l);
+    });
+    return out.join('\n').trim();
+  }
+  // tópicos de pauta: uma linha curta por assunto
+  function topicosDoTexto(t){
+    const vistos = new Set();
+    return refluir(t).split('\n')
+      .map(l => l.replace(/^[\s\-–—•*·▪►✓✔☐☑|]+/, '').replace(/^\d{1,2}[.)]\s+/, '').trim())
+      .filter(l => l.length >= 3 && /[A-Za-zÀ-ÿ]{3}/.test(l))
+      .filter(l => !/^como usar\b/.test(norm(l)))
+      .filter(l => !/^((pautas?|agenda|ata|resumo)( d[aeo] reuniao)?|topicos|assuntos|participantes|data|local|horario|resolutiva|pontos acordados)\s*:?\s*$/.test(norm(l)))
+      .map(l => { if(l.length > 110){ const m = /^(.{20,110}?[.:;!?])\s/.exec(l); l = m ? m[1] : l.slice(0, 107).replace(/\s+\S*$/, '') + '…'; } return l.replace(/[.:;]$/, ''); })
+      .filter(l => { const k = norm(l); if(vistos.has(k)) return false; vistos.add(k); return true; })
+      .slice(0, 80);
+  }
+
+  /* ---------- Levar conteúdo para dentro de uma reunião ---------- */
+  const reunioesRecentes = () => DB.itens.filter(ehReuniao).sort((a, b) => {
+    const h = iso(hojeD()), da = Math.abs(deIso(a.data || h) - deIso(h)), db = Math.abs(deIso(b.data || h) - deIso(h));
+    return da - db || (b.hora || '').localeCompare(a.hora || '');
+  });
+  const rotuloReuniao = r => r.titulo + (r.data ? ' · ' + fmtData(r.data) : '') + (r.hora ? ' ' + r.hora : '');
+  async function levarParaReuniao(it, texto, anexos){
+    R = it;
+    if(!Array.isArray(R.pauta)) R.pauta = [];
+    if(!Array.isArray(R.anexos)) R.anexos = [];
+    let resto = String(texto || '');
+    for(const x of anexos){
+      if(x.texto) resto = resto.replace(x.texto, '');
+      const id = uid();
+      const blob = x.file || (x.blobId ? await lerArq(x.blobId).catch(() => null) : null);
+      if(blob){ try{ await guardarArq(id, blob); }catch(_){} }
+      const txt = /\.pdf$/i.test(x.nome) ? refluir(x.texto || '') : (x.texto || '');
+      const a = { id, nome:x.nome, tipo:x.tipo || '', tamanho:x.tamanho || 0, em:new Date().toISOString(), texto:txt, uso:'guardar', estado: txt ? 'lido' : 'guardado', erro: txt ? '' : 'Guardado.' };
+      R.anexos.push(a);
+      if(a.texto) aplicarUso(a, /^(checklist|pauta)/i.test(x.nome) ? 'pauta' : sugerirUso(a.texto));
+    }
+    resto = resto.split('\n').map(l => l.trim()).filter(Boolean).join('\n');
+    if(resto) R.anotacoes = (R.anotacoes ? R.anotacoes.replace(/\s+$/, '') + '\n' : '') + resto;
+    salvar(); render();
+  }
+
+  // na conferência do organizador: "Colocar dentro da reunião"
+  const cssL = document.createElement('style');
+  cssL.textContent = `
+    .vinc{display:grid;gap:6px;background:var(--rosa-bg);border:1px solid #f7cfe6;border-radius:14px;padding:12px 14px}
+    .vinc select{border-radius:10px}
+    .vinc .mut{font-size:12px}
+    .nota .ent-acoes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .nota .ent-acoes .tg{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--pink);align-self:center}
+  `;
+  document.head.appendChild(cssL);
+  $('prevLista').insertAdjacentHTML('beforebegin', `<div class="vinc"><label class="c"><span class="k">Onde colocar</span>
+    <select id="pvVinc"></select></label><span class="mut" id="pvVincInfo"></span></div>`);
+  function atualizarVinc(){
+    const v = $('pvVinc').value;
+    $('prevLista').hidden = !!v;
+    $('pvSalvar').textContent = v ? 'Levar para a reunião' : 'Adicionar à agenda';
+    $('pvVincInfo').textContent = v ? 'Os anexos e o texto entram na pauta e nas anotações desta reunião. Nenhum item solto é criado. Depois é só gerar o resumo e o plano de ação.' : 'Cada linha vira um item separado na agenda, como na lista abaixo.';
+  }
+  $('pvVinc').addEventListener('change', atualizarVinc);
+  const abrirPreviaOriginal = abrirPrevia;
+  abrirPrevia = function(texto){
+    abrirPreviaOriginal(texto);
+    if(!$('dlgPrev').open) return;
+    const rs = reunioesRecentes().slice(0, 15);
+    $('pvVinc').innerHTML = '<option value="">Criar itens separados na agenda</option>' + rs.map(r => `<option value="${r.id}">Dentro da reunião: ${esc(rotuloReuniao(r))}</option>`).join('');
+    // sugere a reunião quando há anexos ou o texto fala de reunião e existe uma reunião perto de hoje
+    const n = norm(texto), h = iso(hojeD());
+    let melhor = null, pts = 0;
+    rs.forEach(r => {
+      let p = 0;
+      norm(r.titulo).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !/^(reuniao|alinhamento|time|com|para)$/.test(w)).forEach(w => { if(n.includes(w)) p += 2; });
+      if(r.data === h) p += 1;
+      if(/\breuniao\b/.test(n)) p += 1;
+      if(PEND.length) p += 1;
+      if(p > pts){ pts = p; melhor = r; }
+    });
+    const temReuniaoNova = PREV.some(x => x.tipo === 'reuniao' && !x.feito);
+    $('pvVinc').value = melhor && pts >= 2 && (PEND.length || !temReuniaoNova) ? melhor.id : '';
+    atualizarVinc();
+  };
+  const salvarComAnexosOriginal = $('pvSalvar').onclick;
+  $('pvSalvar').onclick = async function(){
+    const v = $('pvVinc').value;
+    if(!v) return salvarComAnexosOriginal.call(this);
+    const it = DB.itens.find(i => i.id === v); if(!it) return;
+    const anexos = PEND.map(p => ({ nome:p.nome, tipo:p.file.type || '', tamanho:p.file.size, texto:p.texto, file:p.file }));
+    PEND = []; desenharPend();
+    await levarParaReuniao(it, PREV_TEXTO, anexos);
+    DB.entradas.push({ id:uid(), em:new Date().toISOString(), texto:PREV_TEXTO, gerados:0, reuniao:it.id, anexosNomes:anexos.map(a => a.nome) });
+    salvar(); $('dlgPrev').close(); capTxt.value = ''; render();
+    abrirReuniao(it);
+    toast('Levado para “' + it.titulo + '”. Confira a pauta e as anotações.');
+  };
+
+  // Caixa de entrada: "Levar para reunião", remover os itens soltos (com desfazer)
+  document.body.insertAdjacentHTML('beforeend', `<dialog id="dlgLevar"><div class="dlg">
+    <h3>Levar para uma reunião</h3>
+    <p class="mut" style="margin:0;font-size:13px">O texto e os anexos deste registro entram na pauta e nas anotações da reunião escolhida.</p>
+    <label class="c"><span class="k">Reunião</span><select id="lvReuniao"></select></label>
+    <div class="rodape"><span></span><div class="dir"><button class="btn ghost" id="lvCancelar">Cancelar</button><button class="btn" id="lvOk">Levar</button></div></div>
+  </div></dialog>`);
+  let ENT = null;
+  $('lvCancelar').onclick = () => $('dlgLevar').close();
+  $('lvOk').onclick = async () => {
+    const it = DB.itens.find(i => i.id === $('lvReuniao').value); if(!it || !ENT) return;
+    const e = ENT;
+    await levarParaReuniao(it, e.texto, (e.anexos || []).map(a => ({ nome:a.nome, tipo:a.tipo, tamanho:a.tamanho, texto:a.texto, blobId:a.id })));
+    e.reuniao = it.id; salvar(); $('dlgLevar').close(); render();
+    abrirReuniao(it);
+    toast('Levado para “' + it.titulo + '”.');
+  };
+  const renderEntradaComAnexos = renderEntrada;
+  renderEntrada = function(){
+    renderEntradaComAnexos();
+    DB.entradas.forEach(x => {
+      const bt = document.querySelector(`[data-reorg="${x.id}"]`); if(!bt) return;
+      const nota = bt.closest('.nota'); if(!nota || nota.querySelector('.ent-acoes')) return;
+      const r = x.reuniao && DB.itens.find(i => i.id === x.reuniao);
+      const soltos = DB.itens.filter(i => i.entrada === x.id && !ehReuniao(i)).length;
+      nota.insertAdjacentHTML('beforeend', `<div class="ent-acoes">
+        ${r ? `<span class="tg">Na reunião: ${esc(r.titulo)}</span>` : ''}
+        <button class="btn ghost min" data-levar="${x.id}">Levar para reunião</button>
+        ${soltos ? `<button class="btn perigo min" data-rm-soltos="${x.id}">Remover os ${soltos} itens soltos deste texto</button>` : ''}
+        ${(x.removidos || []).length ? `<button class="btn ghost min" data-restaurar="${x.id}">Restaurar ${x.removidos.length} itens removidos</button>` : ''}
+      </div>`);
+    });
+  };
+  document.addEventListener('click', e => {
+    const lv = e.target.closest('[data-levar]');
+    if(lv){
+      ENT = DB.entradas.find(x => x.id === lv.dataset.levar); if(!ENT) return;
+      const rs = reunioesRecentes();
+      if(!rs.length){ toast('Crie a reunião primeiro (botão + Reunião).'); return; }
+      $('lvReuniao').innerHTML = rs.map(r => `<option value="${r.id}">${esc(rotuloReuniao(r))}</option>`).join('');
+      if(ENT.reuniao) $('lvReuniao').value = ENT.reuniao;
+      $('dlgLevar').showModal(); return;
+    }
+    const rm = e.target.closest('[data-rm-soltos]');
+    if(rm){
+      if(rm.dataset.conf !== '1'){ rm.dataset.conf = '1'; rm.textContent = 'Confirmar remoção'; setTimeout(() => { if(rm.isConnected){ rm.dataset.conf = ''; renderEntrada(); } }, 4000); return; }
+      const x = DB.entradas.find(y => y.id === rm.dataset.rmSoltos); if(!x) return;
+      const sai = DB.itens.filter(i => i.entrada === x.id && !ehReuniao(i));
+      x.removidos = (x.removidos || []).concat(sai);
+      const ids = new Set(sai.map(i => i.id));
+      DB.itens = DB.itens.filter(i => !ids.has(i.id));
+      salvar(); render(); toast(sai.length + ' itens removidos. Dá para restaurar na Caixa de entrada.'); return;
+    }
+    const rs = e.target.closest('[data-restaurar]');
+    if(rs){
+      const x = DB.entradas.find(y => y.id === rs.dataset.restaurar); if(!x) return;
+      const ids = new Set(DB.itens.map(i => i.id));
+      DB.itens = DB.itens.concat((x.removidos || []).filter(i => !ids.has(i.id)));
+      const n = (x.removidos || []).length; x.removidos = [];
+      salvar(); render(); toast(n + ' itens restaurados.');
+    }
   });
 
   render();
