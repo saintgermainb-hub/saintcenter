@@ -1114,5 +1114,97 @@
     if(n) $('rqPautaN').textContent += ' · ' + n + (n === 1 ? ' novo' : ' novos');
   };
 
+  /* ---------- Secretária: fale ou escreva e ela coloca na agenda ---------- */
+  const cssS = document.createElement('style');
+  cssS.textContent = `
+    .sec-fab{position:fixed;right:22px;bottom:22px;z-index:40;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 18px 10px 12px;background:#fff;border:1px solid #f2d3e6;box-shadow:0 14px 30px -12px rgba(255,62,165,.55);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg)}
+    .sec-fab:hover{border-color:var(--pink)}
+    .sec-fab .laco{width:28px;height:21px}
+    .sec{position:fixed;right:22px;bottom:84px;z-index:41;width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid #f4dcea;border-radius:22px;box-shadow:0 30px 70px -24px rgba(255,62,165,.5);padding:18px;display:grid;gap:12px}
+    .sec-cab{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .sec-cab h3{font-weight:400;font-size:18px;letter-spacing:.04em;margin:0;display:flex;align-items:center;gap:8px}
+    .sec-cab button{font-size:18px;color:var(--g2);padding:0 6px}
+    .sec .mut{font-size:12px;line-height:1.5}
+    .sec-mic{display:flex;align-items:center;gap:12px}
+    .sec-mic button.mic{width:56px;height:56px;border-radius:50%;background:var(--grad);color:#fff;font-size:22px;flex:none;box-shadow:0 10px 22px -8px rgba(255,62,165,.6)}
+    .sec-mic button.mic.on{animation:neon 1.1s ease-in-out infinite;background:var(--pink)}
+    .sec textarea{min-height:84px;border-radius:14px;background:var(--rosa-bg);border-color:#f7d3e9}
+    .sec-acoes{display:flex;justify-content:flex-end;gap:8px}
+    .sec-res{display:grid;gap:6px;max-height:220px;overflow:auto}
+    .sec-res .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid #f4dcea;border-radius:12px;padding:8px 10px}
+    .sec-res .r .t{font-size:13px;line-height:1.35}
+    .sec-res .r .mut{font-size:11px}
+    .sec-res .r .bts{display:flex;gap:4px}
+    .sec-res .r .bts button{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px;color:var(--g1);background:#fff}
+  `;
+  document.head.appendChild(cssS);
+  document.body.insertAdjacentHTML('beforeend', `<button class="sec-fab" id="secAbrir" title="Fale ou escreva e a secretária coloca na agenda">${LACO}Secretária</button>
+  <section class="sec" id="sec" hidden aria-label="Secretária">
+    <div class="sec-cab"><h3>${LACO}Secretária</h3><button type="button" id="secFechar" aria-label="Fechar">×</button></div>
+    <div class="sec-mic"><button type="button" class="mic" id="secMic" aria-label="Falar">🎙</button>
+      <span class="mut" id="secDica">Toque no microfone e fale, ou escreva abaixo. Ex.: “coloca na minha agenda que dia 8/12 às 16h a Márcia da Loggi vem visitar o time do Suporte”.</span></div>
+    <textarea id="secTxt" placeholder="O que coloco na sua agenda?"></textarea>
+    <div class="sec-acoes"><button class="btn" id="secOk">Colocar na agenda</button></div>
+    <div class="sec-res" id="secRes"></div>
+  </section>`);
+  // tira o pedido ("coloca na minha agenda que…") e deixa só o compromisso
+  function limparPedido(l){
+    return l.replace(/^\s*(secret[aá]ria[,:]?\s*)?(por favor[,]?\s*)?/i, '')
+      .replace(/^(me\s+)?(coloca|coloque|colocar|anota|anote|anotar|agenda|agende|agendar|marca|marque|marcar|lembra|lembre|lembrar|registra|registre|adiciona|adicione|inclui|inclua|p[oõ]e|ponha|salva|salve)(-me)?\s+/i, '')
+      .replace(/^(isso\s+|a[ií]\s+)?((na|no|pra|para|em)\s+(a\s+|o\s+)?(minha|minh|meu)\s+(agenda|calend[aá]rio)\s*)?/i, '')
+      .replace(/^(que|de|pra|para|me)\s+/i, '')
+      .trim();
+  }
+  let ouvindo = false, rec = null, executarAoParar = false;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function atualizarMic(){ $('secMic').classList.toggle('on', ouvindo); $('secMic').setAttribute('aria-label', ouvindo ? 'Parar' : 'Falar'); $('secDica').textContent = ouvindo ? 'Ouvindo… fale com calma. Toque de novo para terminar.' : 'Toque no microfone e fale, ou escreva abaixo.'; }
+  $('secMic').onclick = () => {
+    if(ouvindo){ executarAoParar = true; rec && rec.stop(); return; }
+    if(!SR){ toast('Este navegador não tem ditado. No Windows, use a tecla Windows + H dentro do campo.'); $('secTxt').focus(); return; }
+    rec = new SR(); rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = true;
+    const antes = $('secTxt').value.trim(); let final = '';
+    rec.onresult = e => {
+      let parcial = '';
+      for(let i = e.resultIndex; i < e.results.length; i++){ const r = e.results[i]; if(r.isFinal) final += r[0].transcript + ' '; else parcial += r[0].transcript; }
+      $('secTxt').value = ((antes ? antes + '\n' : '') + final + parcial).trim();
+    };
+    rec.onerror = e => { toast(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Libere o microfone: clique no cadeado ao lado do endereço e permita o microfone.' : (e.error === 'no-speech' ? 'Não ouvi nada. Tente de novo.' : 'Não consegui ouvir agora. Pode escrever no campo.')); };
+    rec.onend = () => { ouvindo = false; atualizarMic(); if($('secTxt').value.trim() && executarAoParar !== null) executarSecretaria(); executarAoParar = false; };
+    try{ rec.start(); ouvindo = true; atualizarMic(); }catch(_){ toast('Não consegui abrir o microfone.'); }
+  };
+  function executarSecretaria(){
+    const t = $('secTxt').value.trim(); if(!t) return;
+    const linhas = t.split(/\n|(?<=[.!?;])\s+|\s+(?:e também|e depois|e ainda)\s+/i).map(limparPedido).filter(l => l.length > 2);
+    const achados = organizar(linhas.join('\n')).filter(p => p.incluir !== false && p.titulo.trim());
+    if(!achados.length){ toast('Não entendi. Diga o que é, quando e com quem.'); return; }
+    const ent = uid(), feitos = [];
+    achados.forEach(p => {
+      const n = norm(p.orig || p.titulo);
+      let tipo = p.tipo;
+      if(tipo === 'tarefa' && /\b(visit\w*|vem aqui|vir aqui|vai vir|vai vim|vem ao|almoco|jantar|evento|treinamento|entrevista|consulta|medico|dentista)\b/.test(n)) tipo = 'compromisso';
+      const it = { id:uid(), titulo:p.titulo.trim().replace(/[,;\s]+(urgente|importante|com urg[eê]ncia|por favor)[.!]*$/i, ''), tipo, data:p.data, hora:p.hora, prioridade:p.prioridade, pessoa:p.pessoa || '', notas:'Pela secretária: ' + (p.orig || p.titulo),
+        rec:p.rec || '', sub:[], paiId:'', origem:'', entrada:ent, feito:false, feitoEm:'', criadoEm:new Date().toISOString() };
+      if(ehReuniao(it)){ it.pauta = []; it.anotacoes = ''; }
+      DB.itens.push(it); feitos.push(it);
+    });
+    DB.entradas.push({ id:ent, em:new Date().toISOString(), texto:t, gerados:feitos.length, via:'secretaria' });
+    salvar(); render();
+    $('secTxt').value = '';
+    $('secRes').insertAdjacentHTML('afterbegin', feitos.map(it => `<div class="r" data-sec="${it.id}"><div><div class="t">${esc(it.titulo)}</div>
+      <div class="mut">${esc(TIPO_CURTO[it.tipo] || it.tipo)} · ${it.data ? esc(fmtData(it.data, true)) : 'sem data'}${it.hora ? ' · ' + esc(it.hora) : ''}${it.pessoa ? ' · ' + esc(it.pessoa) : ''}</div></div>
+      <div class="bts"><button type="button" data-sec-abrir="${it.id}">Abrir</button><button type="button" data-sec-desfazer="${it.id}">Desfazer</button></div></div>`).join(''));
+    toast(feitos.length === 1 ? 'Coloquei na sua agenda: ' + feitos[0].titulo + '.' : 'Coloquei ' + feitos.length + ' itens na sua agenda.');
+  }
+  $('secOk').onclick = executarSecretaria;
+  $('secTxt').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); executarSecretaria(); } });
+  $('secAbrir').onclick = () => { $('sec').hidden = !$('sec').hidden; if(!$('sec').hidden) $('secTxt').focus(); };
+  $('secFechar').onclick = () => { if(ouvindo){ executarAoParar = null; rec && rec.stop(); } $('sec').hidden = true; };
+  $('secRes').addEventListener('click', e => {
+    const d = e.target.closest('[data-sec-desfazer]');
+    if(d){ DB.itens = DB.itens.filter(i => i.id !== d.dataset.secDesfazer); salvar(); render(); d.closest('.r').remove(); toast('Desfeito.'); return; }
+    const a = e.target.closest('[data-sec-abrir]');
+    if(a){ const it = DB.itens.find(i => i.id === a.dataset.secAbrir); if(!it){ toast('Esse item não está mais na agenda.'); return; } if(ehReuniao(it)) abrirReuniao(it); else abrirItem(it); }
+  });
+
   render();
 })();
