@@ -162,5 +162,253 @@
   const dica = document.querySelector('.captura .dica');
   if(dica) dica.innerHTML = dica.innerHTML.replace('<b>reunião</b>, ', '<b>reunião</b>, <b>alinhamento</b>, <b>projeto</b>, ');
 
+  /* ---------- Modo reunião: pauta, anotações, resumo e plano de ação ---------- */
+  const ehReuniao = it => !!it && (it.tipo === 'reuniao' || it.tipo === 'alinhamento');
+  const cssR = document.createElement('style');
+  cssR.textContent = `
+    #dlgReuniao{width:min(1120px,calc(100vw - 24px))}
+    .reu-cab{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .reu-cab h3{margin:4px 0 2px}
+    .reu-cab .dir{display:flex;gap:8px;flex-wrap:wrap}
+    .reu-grade{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:14px}
+    .reu-res{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+    .reu-col{border:1px solid #f4dcea;border-radius:16px;padding:14px;background:#fff;display:grid;gap:10px;align-content:start}
+    .reu-t{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    #rqNotas{min-height:300px;background:var(--rosa-bg);border-color:#f7d3e9;font-size:14px}
+    .reu-pauta{display:grid;gap:6px;max-height:300px;overflow:auto}
+    .reu-pauta .l{display:flex;gap:8px;align-items:center}
+    .reu-pauta .l input[type=checkbox]{width:auto;accent-color:#ff3ea5}
+    .reu-pauta .l input[type=text]{padding:7px 10px}
+    .reu-pauta .l.ok input[type=text]{text-decoration:line-through;color:var(--g2)}
+    .reu-pauta .l button{color:var(--g2);font-size:16px;padding:0 6px}
+    .reu-dica{font-size:12px;color:var(--g2);line-height:1.5;margin:0}
+    .reu-acoes{display:flex;justify-content:center}
+    #rqResumo{white-space:pre-wrap;font-family:var(--font);font-size:13px;line-height:1.6;margin:0;max-height:360px;overflow:auto;color:var(--g1);background:var(--rosa-bg);border-radius:12px;padding:12px}
+    .reu-plano{display:grid;gap:8px;max-height:360px;overflow:auto;padding-right:4px}
+    .ac{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;border:1px solid #f4dcea;border-radius:12px;padding:8px 10px;background:#fff}
+    .ac > input[type=checkbox]{width:auto;margin-top:8px;accent-color:#ff3ea5}
+    .ac .cps{display:grid;gap:6px}
+    .ac .l2{display:grid;grid-template-columns:1fr 1fr .9fr;gap:6px}
+    .ac input,.ac select{padding:6px 8px;font-size:12px;border-radius:8px}
+    .ac.off{opacity:.45}
+    .ac .tg{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--pink)}
+    @media(max-width:820px){.reu-grade,.reu-res{grid-template-columns:1fr} .ac .l2{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(cssR);
+  document.body.insertAdjacentHTML('beforeend', `<dialog id="dlgReuniao"><div class="dlg">
+    <div class="reu-cab">
+      <div><span class="k" id="rqTipo"></span><h3 id="rqTit"></h3><span class="mut" id="rqQuando"></span></div>
+      <div class="dir"><button class="btn ghost min" id="rqEditar">Editar dados</button><button class="btn ghost min" id="rqFechar">Fechar</button></div>
+    </div>
+    <div class="reu-grade">
+      <section class="reu-col">
+        <div class="reu-t"><span class="k">1 · Pauta</span><span class="mut" id="rqPautaN"></span></div>
+        <input id="rqPautaIn" placeholder="Tópico da pauta e Enter (pode colar vários)">
+        <div class="reu-pauta" id="rqPauta"></div>
+        <p class="reu-dica">Marque cada tópico quando ele for tratado na reunião.</p>
+      </section>
+      <section class="reu-col">
+        <div class="reu-t"><span class="k">2 · Anotações da reunião</span><span class="mut" id="rqSalvo"></span></div>
+        <textarea id="rqNotas" placeholder="Vá anotando o que for falado, uma ideia por linha.&#10;&#10;Exemplos:&#10;Diretoria pediu foco no Reclame Aqui em dezembro&#10;Decidimos manter a escala 12x36 na Black Friday&#10;Vitória: revisar macros do SaintDesk até sexta&#10;Enviar relatório de 5ATM para o Junior amanhã (urgente)&#10;Nova reunião com o Time Avant dia 25 às 15h"></textarea>
+        <p class="reu-dica">Tudo é salvo sozinho enquanto você escreve. Quem vai fazer: “Nome: ação”. Prazo: “até sexta”, “amanhã”, “dia 25”. Decisão: comece com “Decidimos…” ou “Ficou definido…”.</p>
+      </section>
+    </div>
+    <div class="reu-acoes"><button class="btn" id="rqGerar">3 · Gerar resumo e plano de ação</button></div>
+    <section id="rqResultado" hidden>
+      <div class="reu-res">
+        <div class="reu-col"><div class="reu-t"><span class="k">Resumo da reunião</span><button class="btn ghost min" id="rqCopiar">Copiar resumo</button></div><pre id="rqResumo"></pre></div>
+        <div class="reu-col"><div class="reu-t"><span class="k">Plano de ação</span><span class="mut" id="rqPlanoN"></span></div>
+          <div class="reu-plano" id="rqPlano"></div>
+          <button class="btn ghost min" id="rqAddAcao" style="justify-self:start">+ Ação</button></div>
+      </div>
+      <div class="rodape" style="margin-top:14px"><span class="mut" style="font-size:12px">As ações marcadas entram na agenda como Plano de ação, com responsável e prazo.</span>
+        <div class="dir"><button class="btn" id="rqSalvar">Salvar plano na agenda</button></div></div>
+    </section>
+  </div></dialog>`);
+
+  let R = null, PLANO = [], PONTOS = [], DECISOES = [], tSalvar = null;
+  const RX_DECISAO = /\b(decid|definid|definimos|aprovad|aprovamos|ficou (combinado|definido|decidido|acordado)|combinamos|acordamos|acordado|fica (definido|combinado))/;
+  const ddmm = s => s ? s.slice(8,10) + '/' + s.slice(5,7) : '';
+
+  function salvarDepois(){
+    clearTimeout(tSalvar);
+    $('rqSalvo').textContent = 'Salvando…';
+    tSalvar = setTimeout(() => { salvar(); $('rqSalvo').textContent = 'Salvo ✓'; }, 500);
+  }
+
+  function abrirReuniao(it){
+    R = it;
+    if(!Array.isArray(R.pauta)) R.pauta = [];
+    // pauta que veio do organizador ("Pautas: a, b, c") vira lista
+    if(!R.pauta.length && R.notas){
+      const m = /pautas?\s*:\s*(.+)/i.exec(R.notas);
+      if(m) R.pauta = m[1].split(/[,;]| e /).map(t => t.trim()).filter(Boolean).map(t => ({ t: t.charAt(0).toUpperCase() + t.slice(1), ok:false }));
+    }
+    $('rqTipo').textContent = TIPO_CURTO[R.tipo] || 'Reunião';
+    $('rqTit').textContent = R.titulo;
+    $('rqQuando').textContent = [R.data ? fmtData(R.data, true) : '', R.hora, R.pessoa].filter(Boolean).join(' · ');
+    $('rqNotas').value = R.anotacoes || '';
+    $('rqSalvo').textContent = R.anotacoes ? 'Salvo ✓' : '';
+    $('rqPautaIn').value = '';
+    desenharPauta();
+    PLANO = []; $('rqResultado').hidden = true;
+    if(R.resumo){ gerarResumo(); }
+    $('dlgReuniao').showModal();
+  }
+
+  function desenharPauta(){
+    const p = R.pauta;
+    $('rqPautaN').textContent = p.length ? p.filter(x => x.ok).length + ' de ' + p.length + ' tratados' : '';
+    $('rqPauta').innerHTML = p.length ? p.map((x,i) => `<div class="l ${x.ok?'ok':''}"><input type="checkbox" data-pok="${i}" ${x.ok?'checked':''} aria-label="Tratado"><input type="text" data-pt="${i}" value="${esc(x.t)}"><button type="button" data-pdel="${i}" aria-label="Remover">×</button></div>`).join('')
+      : '<div class="vazio" style="padding:16px">Monte a pauta antes da reunião.</div>';
+  }
+  $('rqPautaIn').addEventListener('keydown', e => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const novos = e.target.value.split('\n').map(t => t.replace(/^[\s\-•*\d.)]+/, '').trim()).filter(Boolean);
+    novos.forEach(t => R.pauta.push({ t, ok:false }));
+    e.target.value = ''; desenharPauta(); salvarDepois();
+  });
+  $('rqPautaIn').addEventListener('paste', e => {
+    const txt = (e.clipboardData || window.clipboardData).getData('text');
+    if(!txt.includes('\n')) return;
+    e.preventDefault();
+    txt.split('\n').map(t => t.replace(/^[\s\-•*\d.)]+/, '').trim()).filter(Boolean).forEach(t => R.pauta.push({ t, ok:false }));
+    desenharPauta(); salvarDepois();
+  });
+  $('rqPauta').addEventListener('input', e => {
+    const t = e.target;
+    if(t.dataset.pt !== undefined){ R.pauta[+t.dataset.pt].t = t.value; salvarDepois(); }
+    if(t.dataset.pok !== undefined){ R.pauta[+t.dataset.pok].ok = t.checked; desenharPauta(); salvarDepois(); }
+  });
+  $('rqPauta').addEventListener('click', e => { const b = e.target.closest('[data-pdel]'); if(b){ R.pauta.splice(+b.dataset.pdel, 1); desenharPauta(); salvarDepois(); } });
+  $('rqNotas').addEventListener('input', e => { R.anotacoes = e.target.value; salvarDepois(); });
+
+  // "Time Avant vai liberar…", "Meiriene ficou de enviar…" → responsável
+  const quemVai = t => { const m = /^(?:[-•*]\s*)?([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ÿ&]+(?:\s(?:[A-ZÁÉÍÓÚÂÊÔÃÕÇ&][\wÀ-ÿ&]*))*)\s+(?:vai|vão|fica de|ficou de|ficaram de|precisa)\s/.exec(String(t||'').trim()); return m && !/^(eu|nós|nos|a gente)$/i.test(m[1]) ? m[1] : ''; };
+  function gerarResumo(){
+    const linhas = (R.anotacoes || '').split('\n').map(l => l.trim()).filter(Boolean);
+    PONTOS = []; DECISOES = [];
+    const jaSalvas = new Set(DB.itens.filter(i => i.origem === R.id).map(i => norm(i.titulo)));
+    const res = linhas.length ? organizar('Reunião base hoje\n' + linhas.join('\n')) : [];
+    const acoes = [];
+    const ponto = t => { t = t.replace(/^•\s*/, '').trim(); if(!t) return; (RX_DECISAO.test(norm(t)) ? DECISOES : PONTOS).push(t); };
+    res.forEach((r, i) => {
+      if(r.tipo === 'reuniao' || r.tipo === 'alinhamento'){
+        // reunião futura com data/hora é ação; o resto é ponto discutido
+        const q = i ? acharQuando(normMesmoTam(r.orig)) : { data:'' };
+        if(i && q.data){ acoes.push(r); }
+        else if(i){ ponto(r.orig); }
+        (r.notas || '').split('\n').forEach(ponto);
+        return;
+      }
+      if(r.incluir === false){ ponto(r.orig); return; }
+      if(RX_DECISAO.test(norm(r.orig)) && !RX_VERBO.test(norm(r.titulo))){ ponto(r.orig); return; }
+      acoes.push(r);
+    });
+    PLANO = acoes.map(r => ({
+      tmp: uid(), titulo: r.titulo, pessoa: r.pessoa || quemVai(r.orig) || nome, data: r.data, hora: r.hora,
+      prioridade: r.prioridade, tipo: (r.tipo === 'reuniao' || r.tipo === 'alinhamento') ? r.tipo : 'plano',
+      salvo: jaSalvas.has(norm(r.titulo)), incluir: !jaSalvas.has(norm(r.titulo))
+    }));
+    desenharPlano();
+    $('rqResultado').hidden = false;
+  }
+
+  function textoResumo(){
+    const p = R.pauta || [];
+    const bl = (tit, l) => l.length ? '\n' + tit + '\n' + l.map(x => '• ' + x).join('\n') + '\n' : '';
+    const plano = PLANO.filter(a => a.incluir || a.salvo);
+    return 'RESUMO DA REUNIÃO\n' + R.titulo + '\n' + [R.data ? fmtData(R.data, true) : '', R.hora, R.pessoa].filter(Boolean).join(' · ') + '\n'
+      + bl('PAUTA TRATADA', p.filter(x => x.ok).map(x => x.t))
+      + bl('PAUTA PENDENTE', p.filter(x => !x.ok).map(x => x.t))
+      + bl('PONTOS DISCUTIDOS', PONTOS)
+      + bl('DECISÕES', DECISOES)
+      + (plano.length ? '\nPLANO DE AÇÃO\n' + plano.map((a,i) => (i+1) + '. ' + a.titulo + ' — ' + (a.pessoa || nome) + ' — ' + (a.data ? ddmm(a.data) + (a.hora ? ' ' + a.hora : '') : 'sem prazo')).join('\n') + '\n' : '');
+  }
+
+  function desenharPlano(){
+    const n = PLANO.filter(a => a.incluir).length;
+    $('rqPlanoN').textContent = PLANO.length ? n + (n === 1 ? ' ação marcada' : ' ações marcadas') : '';
+    $('rqPlano').innerHTML = PLANO.length ? PLANO.map((a,i) => `<div class="ac ${a.incluir || a.salvo ? '' : 'off'}">
+      <input type="checkbox" data-ainc="${i}" ${a.incluir?'checked':''} ${a.salvo?'disabled':''} aria-label="Incluir">
+      <div class="cps">
+        <input data-ac="titulo" data-i="${i}" value="${esc(a.titulo)}" placeholder="O que fazer">
+        <div class="l2">
+          <input data-ac="pessoa" data-i="${i}" value="${esc(a.pessoa)}" placeholder="Responsável">
+          <input type="date" data-ac="data" data-i="${i}" value="${a.data || ''}">
+          <select data-ac="prioridade" data-i="${i}"><option value="alta" ${a.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${a.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${a.prioridade==='baixa'?'selected':''}>Baixa</option></select>
+        </div>
+        ${a.salvo ? '<span class="tg">Já está na agenda</span>' : ''}
+      </div></div>`).join('')
+      : '<div class="vazio" style="padding:16px">Nenhuma ação encontrada nas anotações. Use “+ Ação” para incluir.</div>';
+    $('rqResumo').textContent = textoResumo();
+  }
+  const editarAcao = e => {
+    const t = e.target;
+    if(t.dataset.ainc !== undefined){ PLANO[+t.dataset.ainc].incluir = t.checked; desenharPlano(); return; }
+    if(t.dataset.ac){ PLANO[+t.dataset.i][t.dataset.ac] = t.value; $('rqResumo').textContent = textoResumo(); }
+  };
+  $('rqPlano').addEventListener('input', editarAcao);
+  $('rqPlano').addEventListener('change', editarAcao);
+  $('rqAddAcao').onclick = () => {
+    PLANO.push({ tmp:uid(), titulo:'', pessoa:nome, data:'', hora:'', prioridade:'media', tipo:'plano', incluir:true, salvo:false });
+    desenharPlano();
+    const ins = $('rqPlano').querySelectorAll('input[data-ac="titulo"]'); ins[ins.length-1].focus();
+  };
+  $('rqGerar').onclick = () => {
+    if(!(R.anotacoes || '').trim() && !(R.pauta || []).length){ toast('Escreva as anotações da reunião primeiro.'); $('rqNotas').focus(); return; }
+    gerarResumo();
+    setTimeout(() => $('rqResultado').scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+  };
+  $('rqCopiar').onclick = async () => {
+    const txt = textoResumo();
+    try{ await navigator.clipboard.writeText(txt); }
+    catch(_){ const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    toast('Resumo copiado. É só colar no WhatsApp ou no e-mail.');
+  };
+  $('rqSalvar').onclick = () => {
+    const novas = PLANO.filter(a => a.incluir && !a.salvo && a.titulo.trim());
+    novas.forEach(a => {
+      DB.itens.push({ id:uid(), titulo:a.titulo.trim(), tipo:a.tipo, data:a.data || '', hora:a.hora || '', prioridade:a.prioridade,
+        pessoa: norm(a.pessoa) === norm(nome) ? '' : a.pessoa.trim(), notas:'Da reunião: ' + R.titulo + (R.data ? ' (' + ddmm(R.data) + ')' : ''),
+        rec:'', sub:[], paiId:'', origem:R.id, feito:false, feitoEm:'', criadoEm:new Date().toISOString() });
+      a.salvo = true; a.incluir = false;
+    });
+    R.resumo = textoResumo();
+    R.notas = R.resumo;
+    if(!R.feito){ R.feito = true; R.feitoEm = new Date().toISOString(); }
+    salvar(); render(); desenharPlano();
+    $('rqResumo').textContent = R.resumo;
+    toast(novas.length ? novas.length + (novas.length > 1 ? ' ações salvas na agenda.' : ' ação salva na agenda.') : 'Resumo salvo na reunião.');
+  };
+  $('rqFechar').onclick = () => { if(tSalvar){ clearTimeout(tSalvar); salvar(); } $('dlgReuniao').close(); render(); };
+  $('rqEditar').onclick = () => { const it = R; $('dlgReuniao').close(); abrirItem(it); };
+
+  // clicar numa reunião ou alinhamento abre o modo reunião
+  window.addEventListener('click', e => {
+    if(e.target.closest('[data-chk]')) return;
+    const el = e.target.closest('.item[data-id]');
+    if(!el) return;
+    const it = DB.itens.find(i => i.id === el.dataset.id);
+    if(!ehReuniao(it)) return;
+    e.stopPropagation(); e.preventDefault();
+    if($('dlgDia').open) $('dlgDia').close();
+    abrirReuniao(it);
+  }, true);
+
+  // botão "+ Reunião" no topo
+  const bNovo = $('btnNovo');
+  if(bNovo && !$('btnReuniao')){
+    bNovo.insertAdjacentHTML('beforebegin', '<button class="btn ghost" id="btnReuniao">+ Reunião</button>');
+    $('btnReuniao').onclick = () => {
+      const ag = new Date(); ag.setMinutes(ag.getMinutes() < 30 ? 30 : 60, 0, 0);
+      const it = { id:uid(), titulo:'Reunião', tipo:'reuniao', data:iso(ag), hora:pad(ag.getHours()) + ':' + pad(ag.getMinutes()), prioridade:'media', pessoa:'', notas:'', rec:'', sub:[], paiId:'', pauta:[], anotacoes:'', feito:false, feitoEm:'', criadoEm:new Date().toISOString() };
+      DB.itens.push(it); salvar(); render();
+      abrirItem(it);
+      toast('Dê um nome e o horário. Depois clique na reunião para abrir pauta e anotações.');
+    };
+  }
+
   render();
 })();
