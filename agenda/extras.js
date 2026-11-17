@@ -250,7 +250,7 @@
     $('rqNotas').value = R.anotacoes || '';
     $('rqSalvo').textContent = R.anotacoes ? 'Salvo ✓' : '';
     $('rqPautaIn').value = '';
-    desenharPauta(); desenharAnexos(); desenharLinha(); desenharAcomp();
+    desenharPauta(); desenharAnexos(); desenharLinha(); desenharAcomp(); preencherQuando();
     PLANO = []; $('rqResultado').hidden = true;
     if(R.resumo){ gerarResumo(); }
     $('dlgReuniao').showModal();
@@ -1022,6 +1022,67 @@
   });
   const salvarPlanoOriginal = $('rqSalvar').onclick;
   $('rqSalvar').onclick = function(){ salvarPlanoOriginal.call(this); desenharAcomp(); desenharLinha(); };
+
+  /* ---------- Remarcar, salvar e excluir direto na reunião; atalhos para adiar ---------- */
+  const cssM = document.createElement('style');
+  cssM.textContent = `
+    .reu-quando{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+    .reu-quando input{width:auto;padding:6px 10px;font-size:13px;border-radius:10px}
+    .reu-quando .chip,.adiar .chip{font-size:9px;letter-spacing:.14em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:6px 10px;color:var(--g1);background:#fff}
+    .reu-quando .chip:hover,.adiar .chip:hover{border-color:var(--pink);color:var(--fg)}
+    .adiar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:-4px}
+  `;
+  document.head.appendChild(cssM);
+  $('rqQuando').insertAdjacentHTML('afterend', `<div class="reu-quando">
+    <input type="date" id="rqData" aria-label="Data da reunião"><input type="time" id="rqHora" aria-label="Horário da reunião">
+    <button type="button" class="chip" data-rq-adiar="-1">Antecipar 1 dia</button>
+    <button type="button" class="chip" data-rq-adiar="1">Adiar 1 dia</button>
+    <button type="button" class="chip" data-rq-adiar="7">Adiar 1 semana</button></div>`);
+  $('rqEditar').textContent = 'Mais detalhes';
+  $('rqFechar').insertAdjacentHTML('beforebegin', '<button class="btn perigo min" id="rqExcluir">Excluir</button>');
+  $('rqFechar').insertAdjacentHTML('afterend', '<button class="btn min" id="rqSalvarFechar">Salvar e fechar</button>');
+  function preencherQuando(){
+    $('rqData').value = R.data || ''; $('rqHora').value = R.hora || '';
+    $('rqExcluir').dataset.conf = ''; $('rqExcluir').textContent = 'Excluir';
+  }
+  function aplicarQuando(){
+    R.data = $('rqData').value; R.hora = $('rqHora').value;
+    $('rqQuando').textContent = [R.data ? fmtData(R.data, true) : '', R.hora, R.pessoa].filter(Boolean).join(' · ');
+    salvar(); render(); desenharLinha();
+  }
+  $('rqData').addEventListener('change', () => { aplicarQuando(); toast('Data alterada para ' + (R.data ? fmtData(R.data, true) : 'sem data') + '.'); });
+  $('rqHora').addEventListener('change', () => { aplicarQuando(); toast('Horário alterado para ' + (R.hora || 'sem horário') + '.'); });
+  document.querySelector('#dlgReuniao .reu-quando').addEventListener('click', e => {
+    const b = e.target.closest('[data-rq-adiar]'); if(!b) return;
+    $('rqData').value = iso(somaDias(R.data ? deIso(R.data) : hojeD(), +b.dataset.rqAdiar));
+    aplicarQuando(); toast('Remarcada para ' + fmtData(R.data, true) + (R.hora ? ' às ' + R.hora : '') + '.');
+  });
+  $('rqSalvarFechar').onclick = () => { if(tSalvar){ clearTimeout(tSalvar); } salvar(); $('dlgReuniao').close(); render(); toast('Reunião salva.'); };
+  $('rqExcluir').onclick = () => {
+    const b = $('rqExcluir');
+    if(b.dataset.conf !== '1'){ b.dataset.conf = '1'; b.textContent = 'Confirmar exclusão'; setTimeout(() => { if(b.dataset.conf === '1'){ b.dataset.conf = ''; b.textContent = 'Excluir'; } }, 4000); return; }
+    const sai = R;
+    // se for o 1º encontro de uma série, o próximo passa a ser o início da linha do tempo
+    const outros = DB.itens.filter(i => i !== sai && i.serie === sai.id);
+    if(outros.length){ const nova = outros[0].id; outros.forEach(i => i.serie = nova === i.id ? undefined : nova); }
+    DB.itens = DB.itens.filter(i => i !== sai);
+    if(tSalvar) clearTimeout(tSalvar);
+    salvar(); $('dlgReuniao').close(); render();
+    toast('Reunião excluída. As ações dela continuam na agenda.');
+  };
+
+  // formulário de tarefa: atalhos para adiar ou antecipar
+  $('iData').closest('.g3').insertAdjacentHTML('afterend', `<div class="adiar"><span class="k">Remarcar</span>
+    <button type="button" class="chip" data-adiar="hoje">Hoje</button>
+    <button type="button" class="chip" data-adiar="-1">Antecipar 1 dia</button>
+    <button type="button" class="chip" data-adiar="1">Adiar 1 dia</button>
+    <button type="button" class="chip" data-adiar="7">Adiar 1 semana</button></div>`);
+  document.querySelector('#fItem .adiar').addEventListener('click', e => {
+    const b = e.target.closest('[data-adiar]'); if(!b) return;
+    const v = b.dataset.adiar;
+    $('iData').value = v === 'hoje' ? iso(hojeD()) : iso(somaDias($('iData').value ? deIso($('iData').value) : hojeD(), +v));
+    atualizarGoogle();
+  });
 
   render();
 })();
