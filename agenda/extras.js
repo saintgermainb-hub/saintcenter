@@ -975,9 +975,9 @@
     const s = serieDe(R);
     $('rqLinhaN').textContent = s.length > 1 ? s.length + ' encontros' : '';
     $('rqLinha').innerHTML = s.map((r, i) => {
-      const feito = r.feito || status(r) === 'passou';
-      return (i ? '<span class="seta"></span>' : '') + `<button type="button" class="enc ${r.id === R.id ? 'atual' : ''} ${feito ? 'feito' : ''}" data-enc="${r.id}">
-        <b>${i + 1}º encontro</b><span>${r.data ? esc(fmtData(r.data, true)) : 'Sem data'}${r.hora ? ' · ' + esc(r.hora) : ''}</span><i>${feito ? 'Realizado' : 'Agendado'}</i></button>`;
+      const feito = realizada(r), semNota = !feito && (r.feito || status(r) === 'passou');
+      return (i ? '<span class="seta"></span>' : '') + `<button type="button" class="enc ${r.id === R.id ? 'atual' : ''} ${feito ? 'feito' : ''} ${semNota ? 'sem-nota' : ''}" data-enc="${r.id}">
+        <b>${i + 1}º encontro</b><span>${r.data ? esc(fmtData(r.data, true)) : 'Sem data'}${r.hora ? ' · ' + esc(r.hora) : ''}</span><i>${feito ? 'Realizado' : semNota ? 'Sem anotações' : 'Agendado'}</i></button>`;
     }).join('');
     const d = somaDias(R.data ? deIso(R.data) : hojeD(), 1);
     $('rqProxData').value = iso(d.getDay() === 6 ? somaDias(d, 2) : d.getDay() === 0 ? somaDias(d, 1) : d);
@@ -1205,6 +1205,38 @@
     const a = e.target.closest('[data-sec-abrir]');
     if(a){ const it = DB.itens.find(i => i.id === a.dataset.secAbrir); if(!it){ toast('Esse item não está mais na agenda.'); return; } if(ehReuniao(it)) abrirReuniao(it); else abrirItem(it); }
   });
+
+  /* ---------- Realizada = tem anotações; depois disso data e horário ficam travados ---------- */
+  function realizada(r){ return !!r && (!!String(r.anotacoes || '').trim() || !!r.resumo); }
+  const cssV = document.createElement('style');
+  cssV.textContent = `
+    .reu-quando input:disabled,#fItem input:disabled{opacity:.55;cursor:not-allowed}
+    .reu-quando .chip:disabled,.adiar .chip:disabled{opacity:.35;cursor:not-allowed}
+    .trava-info{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--pink)}
+    .enc.sem-nota i{color:#c2187a}
+  `;
+  document.head.appendChild(cssV);
+  document.querySelector('#dlgReuniao .reu-quando').insertAdjacentHTML('beforeend', '<span class="trava-info" id="rqTrava" hidden>Realizada · data e horário travados</span>');
+  function travarQuando(){
+    const t = realizada(R);
+    $('rqData').disabled = t; $('rqHora').disabled = t;
+    document.querySelectorAll('#dlgReuniao [data-rq-adiar]').forEach(b => b.disabled = t);
+    $('rqTrava').hidden = !t;
+  }
+  const preencherQuandoBase = preencherQuando;
+  preencherQuando = function(){ preencherQuandoBase(); travarQuando(); };
+  const aplicarQuandoBase = aplicarQuando;
+  aplicarQuando = function(){ if(realizada(R)){ preencherQuandoBase(); travarQuando(); return; } aplicarQuandoBase(); };
+  let tLinha = null;
+  $('rqNotas').addEventListener('input', () => { travarQuando(); clearTimeout(tLinha); tLinha = setTimeout(desenharLinha, 400); });
+  // "Mais detalhes": reunião realizada também não muda data e horário
+  const abrirItemBase = abrirItem;
+  abrirItem = function(it, padrao){
+    abrirItemBase(it, padrao);
+    const t = !!it && ehReuniao(it) && realizada(it);
+    $('iData').disabled = t; $('iHora').disabled = t;
+    document.querySelectorAll('#fItem [data-adiar]').forEach(b => b.disabled = t);
+  };
 
   render();
 })();
