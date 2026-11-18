@@ -32,7 +32,7 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--g2)}
 
 /* estrutura */
-.app{position:fixed;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.app{position:fixed;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;grid-template-columns:minmax(0,1fr)}
 header{padding:calc(var(--topo) + 10px) 16px 0;background:#fff;border-bottom:1px solid #f6e2ee}
 .cab{display:flex;align-items:center;gap:10px}
 .cab .nome{display:grid;line-height:1.15}
@@ -76,17 +76,18 @@ main{position:relative;overflow:hidden}
 /* barra de escrever */
 footer{background:#fff;border-top:1px solid #f6e2ee;padding:8px 10px calc(var(--base) + 8px)}
 .barra{display:flex;align-items:flex-end;gap:8px}
-.campo{flex:1;display:flex;align-items:flex-end;background:var(--rosa-bg);border:1px solid #f7d3e9;border-radius:22px;padding:4px 6px 4px 14px;min-height:44px}
+.campo{flex:1;min-width:0;display:flex;align-items:flex-end;background:var(--rosa-bg);border:1px solid #f7d3e9;border-radius:22px;padding:4px 6px 4px 14px;min-height:44px}
 .campo textarea{flex:1;border:0;background:transparent;resize:none;outline:none;line-height:1.4;padding:9px 0;max-height:130px;min-height:22px}
 .redondo{width:46px;height:46px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;flex:none;box-shadow:0 8px 18px -8px rgba(255,62,165,.6)}
 .redondo svg{width:22px;height:22px}
 .gravando .campo{display:none}
-.rec{flex:1;display:none;align-items:center;gap:10px;min-height:44px;border-radius:22px;border:1px solid var(--rosa);padding:0 8px 0 14px;background:#fff}
+.rec{flex:1;min-width:0;display:none;align-items:center;gap:10px;min-height:44px;border-radius:22px;border:1px solid var(--rosa);padding:0 8px 0 14px;background:#fff}
 .gravando .rec{display:flex}
 .rec .ponto{width:10px;height:10px;border-radius:50%;background:var(--neon);animation:pisca 1s infinite}
 @keyframes pisca{50%{opacity:.25}}
-.rec .ouvido{flex:1;font-size:13px;color:var(--g1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left}
-.rec .tempo{font-size:12px;color:var(--g2);font-variant-numeric:tabular-nums}
+.rec .x{min-width:40px;min-height:40px;flex:none}
+.rec .ouvido{flex:1;min-width:0;font-size:13px;color:var(--g1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;direction:rtl;text-align:left}
+.rec .tempo{flex:none;font-size:12px;color:var(--g2);font-variant-numeric:tabular-nums}
 .rec .x{font-size:20px;color:var(--g2);padding:0 6px}
 .gravando .redondo{background:var(--pink);animation:neon 1.1s ease-in-out infinite}
 .dica-teclado{font-size:11px;color:var(--g2);text-align:center;margin:6px 0 0;line-height:1.4}
@@ -467,39 +468,51 @@ txt.addEventListener('input', () => { ajustarAltura(); botao(); });
 txt.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey && !/android|iphone|ipad/i.test(navigator.userAgent)){ e.preventDefault(); enviarTexto(); } });
 function enviarTexto(){ const t = txt.value.trim(); if(!t && !PEND.length) return; txt.value = ''; ajustarAltura(); if(PEND.length){ enviarComAnexos(t); return; } botao(); receber(t, false); }
 
-let gravando = false, rec = null, final = '', parcial = '', cancelado = false, tInicio = 0, tRelogio = null;
-function pararUI(){ gravando = false; document.body.classList.remove('gravando'); clearInterval(tRelogio); botao(); }
+let gravando = false, rec = null, final = '', parcial = '', encerrado = false, tInicio = 0, tRelogio = null, tSemVoz = null;
+const DICA_REC = 'Ouvindo… toque na seta ➤ para enviar';
+function pararUI(){ gravando = false; document.body.classList.remove('gravando'); clearInterval(tRelogio); clearTimeout(tSemVoz); botao(); }
+// o iPhone às vezes não avisa quando o microfone para: a tela não depende disso
+function encerrar(enviar){
+  if(!gravando) return;
+  const t = (final + ' ' + parcial).trim();
+  encerrado = true; pararUI();
+  const r = rec; rec = null;
+  try{ enviar ? r.stop() : r.abort(); }catch(_){}
+  setTimeout(() => { try{ r && r.abort(); }catch(_){} }, 1500);
+  if(!enviar) return;
+  if(t) receber(t, true);
+  else { aviso('Não captei sua voz. Use o microfone do teclado.'); $('dicaTeclado').hidden = false; txt.focus(); }
+}
 function gravar(){
   if(!SR){ $('dicaTeclado').hidden = false; txt.focus(); return; }
-  final = ''; parcial = ''; cancelado = false;
-  rec = new SR(); rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = true;
-  rec.onresult = e => {
+  final = ''; parcial = ''; encerrado = false;
+  const r = new SR(); rec = r; r.lang = 'pt-BR'; r.interimResults = true; r.continuous = true;
+  r.onresult = e => {
+    if(encerrado || rec !== r) return;
     parcial = '';
-    for(let i = e.resultIndex; i < e.results.length; i++){ const r = e.results[i]; if(r.isFinal) final += r[0].transcript + ' '; else parcial += r[0].transcript; }
-    $('ouvido').textContent = (final + parcial).trim() || 'Ouvindo…';
+    for(let i = e.resultIndex; i < e.results.length; i++){ const x = e.results[i]; if(x.isFinal) final += x[0].transcript + ' '; else parcial += x[0].transcript; }
+    $('ouvido').textContent = (final + parcial).trim() || DICA_REC;
+    clearTimeout(tSemVoz);
   };
-  rec.onerror = e => {
-    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ aviso('Libere o microfone para a Secretária nas configurações do celular.'); $('dicaTeclado').hidden = false; }
-    else if(e.error === 'no-speech') aviso('Não ouvi nada. Tente de novo.');
-    else if(e.error !== 'aborted') aviso('Não consegui ouvir agora. Pode escrever ou usar o microfone do teclado.');
+  r.onerror = e => {
+    if(encerrado || rec !== r) return;
+    if(e.error === 'not-allowed' || e.error === 'service-not-allowed'){ aviso('Libere o microfone e o Ditado do iPhone: Ajustes > Geral > Teclado > Ativar Ditado.'); $('dicaTeclado').hidden = false; encerrar(false); }
+    else if(e.error === 'no-speech'){ aviso('Não ouvi nada. Tente de novo.'); encerrar(false); }
+    else if(e.error !== 'aborted'){ aviso('Não consegui ouvir agora. Use o microfone do teclado.'); $('dicaTeclado').hidden = false; encerrar(true); }
   };
-  rec.onend = () => {
-    const t = (final + ' ' + parcial).trim();
-    pararUI();
-    if(!cancelado && t) receber(t, true);
-  };
-  try{ rec.start(); }catch(_){ aviso('Não consegui abrir o microfone.'); return; }
-  gravando = true; document.body.classList.add('gravando'); $('ouvido').textContent = 'Ouvindo…';
+  r.onend = () => { if(encerrado || rec !== r) return; encerrar(true); };  // o navegador parou sozinho: envia o que ouviu
+  try{ r.start(); }catch(_){ rec = null; aviso('Não consegui abrir o microfone. Use o microfone do teclado.'); $('dicaTeclado').hidden = false; txt.focus(); return; }
+  gravando = true; document.body.classList.add('gravando'); $('ouvido').textContent = DICA_REC;
   tInicio = Date.now(); $('tempo').textContent = '0:00';
   tRelogio = setInterval(() => { const s = Math.floor((Date.now() - tInicio) / 1000); $('tempo').textContent = Math.floor(s / 60) + ':' + pad(s % 60); }, 500);
+  tSemVoz = setTimeout(() => { if(gravando && !(final + parcial).trim()) $('ouvido').textContent = 'Não estou captando… toque na seta ou no ×'; }, 7000);
   botao();
 }
 $('acao').addEventListener('click', () => {
-  if(gravando){ rec && rec.stop(); return; }
-  if(temAlgo() || !SR){ if(temAlgo()) enviarTexto(); else gravar(); return; }
-  gravar();
+  if(gravando){ encerrar(true); return; }
+  if(temAlgo()) enviarTexto(); else gravar();
 });
-$('cancelar').addEventListener('click', () => { cancelado = true; rec && rec.abort(); pararUI(); });
+$('cancelar').addEventListener('click', () => encerrar(false));
 botao();
 
 /* ---------- início ---------- */
