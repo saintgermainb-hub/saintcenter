@@ -283,7 +283,7 @@ function falar(de, texto, extra){ CHAT.push(Object.assign({ de, texto, em:Date.n
 function boasVindas(){
   if(CHAT.length){ desenhar(); return; }
   const n = primeiroNome();
-  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Me mande por mensagem ou áudio o que precisa e eu coloco na sua agenda.\n\nEx.: “dia 8/12 às 16h a Márcia da Loggi vem visitar o time do Suporte”.\n\nVocê também pode perguntar: “o que tenho hoje?”, “e amanhã?” ou “o que está atrasado?”.`);
+  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Me mande por mensagem ou áudio o que precisa e eu coloco na sua agenda.\n\nEx.: “dia 8/12 às 16h a Márcia da Loggi vem visitar o time do Suporte”.\n\nVocê também pode perguntar: “o que tenho hoje?”, “o que está atrasado?” ou “buscar troca e devolução”.`);
 }
 
 /* ---------- anexos: foto, print, PDF, Word, Excel ---------- */
@@ -418,6 +418,15 @@ function receber(texto, audio){
   falar('eu', texto, audio ? { audio:true } : null);
   if(!SEC){ setTimeout(() => falar('ela', 'Ainda estou abrindo sua agenda. Tente de novo em instantes.'), 300); return; }
   setTimeout(() => {
+    const mb = norm(texto).match(/^(busca|buscar|busque|procura|procurar|procure|pesquisa|pesquisar|pesquise|acha|achar|ache|encontra|encontrar|encontre)\b[:\s]*(.*)$/);
+    if(mb && SEC.buscar){
+      const q = texto.trim().split(/\s+/).slice(1).join(' ').replace(/^(por|sobre|o|a)\s+/i, '');
+      const r = q ? SEC.buscar(q) : [];
+      if(!r.length){ falar('ela', q ? 'Não encontrei nada sobre “' + q + '”. Tente outra palavra.' : 'O que eu procuro? Ex.: “buscar troca e devolução”.'); return; }
+      const itens = r.filter(x => x.fonte === 'item').slice(0, 10), ent = r.filter(x => x.fonte === 'entrada').slice(0, 3);
+      falar('ela', 'Encontrei ' + r.length + (r.length === 1 ? ' resultado' : ' resultados') + ' para “' + q + '”:' + ent.map(x => '\n\n📥 Caixa de entrada: “' + x.trecho.slice(0, 180) + '”').join(''), { cards: itens.map(x => ({ id:x.id, titulo:x.titulo })) });
+      return;
+    }
     const p = pergunta(texto);
     if(p){ falar('ela', p.texto, { cards: p.lista.slice(0, 25).map(i => ({ id:i.id, titulo:i.titulo })) }); return; }
     let feitos = [];
