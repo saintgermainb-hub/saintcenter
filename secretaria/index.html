@@ -226,7 +226,7 @@ function agendaWin(){ try{ return $('agenda').contentWindow; }catch(_){ return n
 function iniciar(){
   $('estado').textContent = 'conectando…'; $('estado').className = '';
   carregada = false; SEC = null;
-  $('agenda').src = '../agenda/?app=1';
+  $('agenda').src = '../agenda/?app=1&v=' + VERSAO;
 }
 $('agenda').addEventListener('load', () => {
   const w = agendaWin(); if(!w || !w.document) return;
@@ -602,7 +602,7 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 /* ---------- início ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 // versão nova publicada: limpa a cópia guardada no celular e abre a nova
-const VERSAO = '2026-11-18-2';
+const VERSAO = '2026-11-18-3';
 async function checarVersao(){
   try{
     const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
