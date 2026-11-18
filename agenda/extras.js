@@ -357,7 +357,7 @@
         <div class="l2">
           <input data-ac="pessoa" data-i="${i}" value="${esc(a.pessoa)}" placeholder="Responsável">
           <input type="date" data-ac="data" data-i="${i}" value="${a.data || ''}">
-          <select data-ac="prioridade" data-i="${i}"><option value="alta" ${a.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${a.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${a.prioridade==='baixa'?'selected':''}>Baixa</option></select>
+          <select data-ac="prioridade" data-i="${i}"><option value="diretoria" ${a.prioridade==='diretoria'?'selected':''}>Diretoria</option><option value="alta" ${a.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${a.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${a.prioridade==='baixa'?'selected':''}>Baixa</option></select>
         </div>
         ${a.salvo ? '<span class="tg">Já está na agenda</span>' : ''}
       </div></div>`).join('')

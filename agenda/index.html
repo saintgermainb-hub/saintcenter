@@ -123,6 +123,8 @@ nav.abas button[aria-selected="true"] .n{background:rgba(255,255,255,.3);color:#
 .tipo.objetivo{background:#fff;border-color:var(--rosa2)}
 .prio{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--g3)}
 .prio.alta{background:var(--pink)}
+.tag-dir{display:inline-block;font-size:9px;letter-spacing:.18em;text-transform:uppercase;background:#000;color:#fff;border-radius:999px;padding:2px 8px;line-height:1.5}
+.item.dir{border-left:3px solid #000}
 .prio.media{background:var(--rosa2)}
 .chk{width:22px;height:22px;border-radius:50%;border:2px solid var(--rosa2);display:grid;place-items:center;flex:none;background:#fff}
 .chk.on{background:var(--grad);border-color:transparent;color:#fff}
@@ -329,7 +331,7 @@ label.c{display:grid;gap:5px}
       <label class="c"><span class="k">Hora</span><input id="iHora" type="time"></label>
     </div>
     <div class="g3">
-      <label class="c"><span class="k">Prioridade</span><select id="iPrio"><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></label>
+      <label class="c"><span class="k">Prioridade</span><select id="iPrio"><option value="diretoria">Solicitação da diretoria</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></label>
       <label class="c"><span class="k">Pessoa / responsável</span><input id="iPessoa" placeholder="Ex.: Vitória"></label>
       <label class="c"><span class="k">Repetir</span><select id="iRec"><option value="">Não repete</option><option value="diaria">Todo dia útil</option><option value="semanal">Toda semana</option><option value="mensal">Todo mês</option></select></label>
     </div>
@@ -446,8 +448,11 @@ function status(it){
   return 'hoje';
 }
 const clsSt = it => { const s = status(it); return s === 'atrasada' ? 'st-atrasada' : s === 'hoje' ? 'st-hoje' : s === 'passou' ? 'passou' : ''; };
-const ordem = (a,b) => (a.data||'9999') < (b.data||'9999') ? -1 : (a.data||'9999') > (b.data||'9999') ? 1 :
-  (a.hora||'99') < (b.hora||'99') ? -1 : (a.hora||'99') > (b.hora||'99') ? 1 : ({alta:0,media:1,baixa:2}[a.prioridade]-({alta:0,media:1,baixa:2}[b.prioridade]));
+// Solicitação da diretoria passa na frente de tudo
+const ehDir = it => !!it && it.prioridade === 'diretoria' && !it.feito;
+const PESO = {diretoria:-1, alta:0, media:1, baixa:2};
+const ordem = (a,b) => (ehDir(b) - ehDir(a)) || ((a.data||'9999') < (b.data||'9999') ? -1 : (a.data||'9999') > (b.data||'9999') ? 1 :
+  (a.hora||'99') < (b.hora||'99') ? -1 : (a.hora||'99') > (b.hora||'99') ? 1 : ((PESO[a.prioridade] ?? 1) - (PESO[b.prioridade] ?? 1)));
 
 /* ================== Organizador de textos ================== */
 const VERBOS = 'enviar|mandar|fazer|criar|revisar|ligar|cobrar|montar|agendar|marcar|verificar|checar|conferir|definir|entregar|atualizar|preparar|falar|responder|organizar|apresentar|alinhar|validar|aprovar|ajustar|corrigir|levantar|analisar|acompanhar|treinar|contratar|demitir|desligar|pagar|solicitar|pedir|comprar|resolver|finalizar|terminar|concluir|documentar|escrever|redigir|elaborar|implementar|subir|publicar|testar|ver|olhar|lembrar|avisar|informar|comunicar|retornar|confirmar|reservar|cadastrar|liberar|bloquear|incluir|tirar|remover|trocar|mudar|planejar|estruturar|dar|passar|levar|buscar|pegar|abrir|fechar|registrar|calcular|medir|monitorar|reunir|convocar|convidar|fazer|cancelar|renovar|negociar|orcar|cotar|providenciar|encaminhar|repassar|compartilhar|imprimir|assinar|ler|estudar|gravar|postar|divulgar|reforcar|rever|refazer|montar|desenhar|mapear|priorizar|delegar|escalar|tratar|garantir|manter';
@@ -457,6 +462,7 @@ const RX_REUNIAO = /\b(reuniao|reunioes|call|alinhamento|1:1|1x1|one ?on ?one|me
 const RX_OBJ = /\b(objetivo|objetivos|meta|metas|okr|atingir|alcancar|bater a meta|chegar (no|na|a|ao)|ra ?1000)\b/;
 const RX_PLANO = /\bplano(s)? de acao\b/;
 const RX_COMPR = /\b(consulta|medico|dentista|exame|evento|almoco|jantar|visita|treinamento|palestra|workshop|entrevista|viagem|aniversario|festa|curso|aula|banco|cartorio|live)\b/;
+const RX_DIR = /\b(diretoria|diretor|diretora|ceo|junior|presidencia)\b/;
 const RX_URG = /\b(urgente|urgencia|prioridade|prioritario|importante|asap|critico|imediato|ceo|junior)\b|!!/;
 const RX_SECAO = /^(proximos passos|proximas acoes|acoes|action items|to ?do|a fazer|para fazer|tarefas|pendencias|encaminhamentos|combinados|o que preciso fazer|o que fazer|responsaveis|pautas?|assuntos|topicos|decisoes|decidido|discutido|resumo|notas|observacoes|contexto|plano de acao|planos de acao|objetivos?|metas?)\s*:?\s*$/;
 
@@ -619,7 +625,7 @@ function organizar(texto){
 
     const it = novoItem({
       tipo, titulo, data:q.data, hora:q.hora, rec:q.rec,
-      prioridade: urg ? 'alta' : (tipo === 'objetivo' ? 'alta' : 'media'),
+      prioridade: (RX_DIR.test(n) || RX_DIR.test(norm(remetente || ''))) ? 'diretoria' : urg ? 'alta' : (tipo === 'objetivo' ? 'alta' : 'media'),
       pessoa: resp || (remetente && !/^(eu|voce|kah|karine)/.test(norm(remetente)) ? remetente : ''),
       orig: bruta.trim(), incluir:true
     });
@@ -650,11 +656,11 @@ function linhaItem(it, opt){
   const subs = it.sub && it.sub.length ? `<span>☑ ${it.sub.filter(s=>s.ok).length}/${it.sub.length}</span>` : '';
   const quando = it.data ? (fmtData(it.data) + (it.hora ? ' · ' + it.hora : '')) : 'Sem data';
   const rotulo = st === 'atrasada' ? 'Atrasada · ' + quando : st === 'hoje' ? (it.hora ? 'Hoje · ' + it.hora : 'Vence hoje') : st === 'passou' ? 'Já passou · ' + quando : quando;
-  return `<div class="item ${clsSt(it)} ${it.feito?'feito':''}" data-id="${it.id}">
+  return `<div class="item ${clsSt(it)} ${it.feito?'feito':''} ${ehDir(it)?'dir':''}" data-id="${it.id}">
     <button class="chk ${it.feito?'on':''}" data-chk="${it.id}" aria-label="${it.feito?'Reabrir':'Concluir'}: ${esc(it.titulo)}"></button>
     <div><div class="t">${esc(it.titulo)}</div>
       <div class="meta"><span class="tipo ${it.tipo}">${TIPO_CURTO[it.tipo]||it.tipo}</span>
-        <span class="prio ${it.prioridade}" title="Prioridade ${it.prioridade}"></span>
+        ${it.prioridade === 'diretoria' ? '<span class="tag-dir" title="Solicitação da diretoria: passa na frente de tudo">Diretoria</span>' : `<span class="prio ${it.prioridade}" title="Prioridade ${it.prioridade}"></span>`}
         ${it.pessoa ? `<span>${esc(it.pessoa)}</span>` : ''}${pai ? `<span>↳ ${esc(pai.titulo)}</span>` : ''}${subs}${it.rec ? '<span>↻</span>' : ''}</div></div>
     <div class="when">${esc(rotulo)}</div></div>`;
 }
@@ -708,6 +714,9 @@ function renderLista(){
     ['Sem data', i => !i.feito && !i.data],
   ];
   if(VER_FEITAS) grupos.push(['Concluídas', i => i.feito]);
+  // solicitações da diretoria ficam num bloco próprio, no topo
+  grupos.forEach(g => { if(g[0] !== 'Concluídas'){ const f = g[1]; g[1] = i => !ehDir(i) && f(i); } });
+  grupos.unshift(['Solicitações da diretoria', i => ehDir(i)]);
   const html = grupos.map(([t,f]) => {
     const l = base.filter(f).sort(t === 'Concluídas' ? (a,b)=> (b.feitoEm||'').localeCompare(a.feitoEm||'') : ordem);
     return l.length ? `<div class="grupo-t"><span class="k">${t} · ${l.length}</span></div><div class="lista">${l.map(i => linhaItem(i)).join('')}</div>` : '';
@@ -906,7 +915,7 @@ function desenharPrevia(){
         <select data-pc="tipo" data-i="${i}">${Object.entries(TIPO_CURTO).map(([k,t])=>`<option value="${k}" ${p.tipo===k?'selected':''}>${t}</option>`).join('')}</select>
         <input type="date" data-pc="data" data-i="${i}" value="${p.data}">
         <input type="time" data-pc="hora" data-i="${i}" value="${p.hora}">
-        <select data-pc="prioridade" data-i="${i}"><option value="alta" ${p.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${p.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${p.prioridade==='baixa'?'selected':''}>Baixa</option></select>
+        <select data-pc="prioridade" data-i="${i}"><option value="diretoria" ${p.prioridade==='diretoria'?'selected':''}>Diretoria</option><option value="alta" ${p.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${p.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${p.prioridade==='baixa'?'selected':''}>Baixa</option></select>
       </div>
       <div class="orig">${p.aviso ? `<span class="tg">${esc(p.aviso)}</span> · ` : ''}${p.pessoa ? `<span class="tg">${esc(p.pessoa)}</span> · ` : ''}${p.rec ? '<span class="tg">Repete</span> · ' : ''}${p.feito ? '<span class="tg">Já aconteceu</span> · ' : ''}${p.paiTmp ? '<span class="tg">Plano do objetivo</span> · ' : ''}${p.notas ? `<span class="tg">${p.notas.split('\n').length} anotações nas notas</span> · ` : ''}${esc(p.orig)}</div>
     </div></div>`).join('');
