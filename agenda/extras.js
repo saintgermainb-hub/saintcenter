@@ -1161,12 +1161,15 @@
     .sec-mic button.mic.on{animation:neon 1.1s ease-in-out infinite;background:var(--pink)}
     .sec textarea{min-height:84px;border-radius:14px;background:var(--rosa-bg);border-color:#f7d3e9}
     .sec-acoes{display:flex;justify-content:flex-end;gap:8px}
-    .sec-res{display:grid;gap:6px;max-height:220px;overflow:auto}
+    .sec-res{display:grid;gap:8px;max-height:320px;overflow:auto}
     .sec-res .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid #f4dcea;border-radius:12px;padding:8px 10px}
     .sec-res .r .t{font-size:13px;line-height:1.35}
     .sec-res .r .mut{font-size:11px}
     .sec-res .r .bts{display:flex;gap:4px}
     .sec-res .r .bts button{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px;color:var(--g1);background:#fff}
+    .sec-res .r-conv{display:grid;gap:6px;border-bottom:1px solid #f6e2ee;padding-bottom:8px}
+    .sec-res .r-conv>.bts button{font-size:11px;border:1px solid #f2d3e6;border-radius:12px;padding:6px 10px;color:var(--fg);background:#fff;text-align:left}
+    .sec-res .r-conv>.bts button:disabled{opacity:.5}
   `;
   document.head.appendChild(cssS);
   document.body.insertAdjacentHTML('beforeend', `<button class="sec-fab" id="secAbrir" title="Fale ou escreva e a secretária coloca na agenda">${LACO}Secretária</button>
@@ -1174,8 +1177,8 @@
     <div class="sec-cab"><h3>${LACO}Secretária</h3><button type="button" id="secFechar" aria-label="Fechar">×</button></div>
     <div class="sec-mic"><button type="button" class="mic" id="secMic" aria-label="Falar">🎙</button>
       <span class="mut" id="secDica">Toque no microfone e fale, ou escreva abaixo. Ex.: “coloca na minha agenda que dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”.</span></div>
-    <textarea id="secTxt" placeholder="O que coloco na sua agenda?"></textarea>
-    <div class="sec-acoes"><button class="btn" id="secOk">Colocar na agenda</button></div>
+    <textarea id="secTxt" placeholder="Fale comigo: anotar, adiar, desmarcar, perguntar…"></textarea>
+    <div class="sec-acoes"><button class="btn" id="secOk">Enviar</button></div>
     <div class="sec-res" id="secRes"></div>
   </section>`);
   // tira o pedido ("coloca na minha agenda que…") e deixa só o compromisso
@@ -1228,8 +1231,18 @@
     itens: () => DB.itens.slice(), status: it => status(it), ehReuniao: it => ehReuniao(it), tipoCurto: k => TIPO_CURTO[k] || k, fmtData: (d, c) => fmtData(d, c),
     abrir: id => { const it = DB.itens.find(i => i.id === id); if(!it) return false; if(ehReuniao(it)) abrirReuniao(it); else verItem(it); return true; }
   };
+  // resposta da secretária que conversa (secretaria-conversa.js): texto, itens e botões
+  const SEC_OPS = {};
+  function mostrarConversa(pedido, r){
+    const ops = (r.opcoes || []).map(o => { const k = uid(); SEC_OPS[k] = o.acao; return `<button type="button" data-sec-op="${k}">${esc(o.rotulo)}${o.sub ? ' · ' + esc(o.sub) : ''}</button>`; }).join('');
+    const cards = (r.cards || []).map(c => { const k = uid(); SEC_OPS[k] = c; const it = DB.itens.find(i => i.id === c.id) || c;
+      return `<div class="r" data-sec="${esc(c.id)}"><div><div class="t">${esc(it.titulo)}</div><div class="mut">${c.apagado ? 'Desmarcado' : esc(TIPO_CURTO[it.tipo] || it.tipo || '') + ' · ' + (it.data ? esc(fmtData(it.data, true)) : 'sem data') + (it.hora ? ' · ' + esc(it.hora) : '')}</div></div>
+        <div class="bts">${c.apagado ? '' : `<button type="button" data-sec-abrir="${esc(c.id)}">Abrir</button>`}${c.podeDesfazer ? `<button type="button" data-sec-desf="${k}">Desfazer</button>` : ''}</div></div>`; }).join('');
+    $('secRes').insertAdjacentHTML('afterbegin', `<div class="r-conv"><div class="mut" style="text-align:right">${esc(pedido)}</div><div class="t" style="white-space:pre-wrap;font-size:13px;line-height:1.45">${esc(r.texto)}</div>${cards}${ops ? `<div class="bts" style="display:flex;flex-wrap:wrap;gap:4px">${ops}</div>` : ''}</div>`);
+  }
   function executarSecretaria(){
     const t = $('secTxt').value.trim(); if(!t) return;
+    if(window.SG_secretaria && window.SG_secretaria.conversar){ $('secTxt').value = ''; mostrarConversa(t, window.SG_secretaria.conversar(t)); return; }
     const feitos = secretariaCore(t);
     if(!feitos.length){ toast('Não entendi. Diga o que é, quando e com quem.'); return; }
     $('secTxt').value = '';
@@ -1243,6 +1256,10 @@
   $('secAbrir').onclick = () => { $('sec').hidden = !$('sec').hidden; if(!$('sec').hidden) $('secTxt').focus(); };
   $('secFechar').onclick = () => { if(ouvindo){ executarAoParar = null; rec && rec.stop(); } $('sec').hidden = true; };
   $('secRes').addEventListener('click', e => {
+    const op = e.target.closest('[data-sec-op]');
+    if(op && window.SG_secretaria && SG_secretaria.executar){ const a = SEC_OPS[op.dataset.secOp]; op.parentElement.querySelectorAll('button').forEach(b => b.disabled = true); mostrarConversa(op.textContent, SG_secretaria.executar(a)); return; }
+    const df = e.target.closest('[data-sec-desf]');
+    if(df && window.SG_secretaria && SG_secretaria.desfazerCard){ SG_secretaria.desfazerCard(SEC_OPS[df.dataset.secDesf]); df.remove(); toast('Desfeito.'); return; }
     const d = e.target.closest('[data-sec-desfazer]');
     if(d){ DB.itens = DB.itens.filter(i => i.id !== d.dataset.secDesfazer); salvar(); render(); d.closest('.r').remove(); toast('Desfeito.'); return; }
     const a = e.target.closest('[data-sec-abrir]');
