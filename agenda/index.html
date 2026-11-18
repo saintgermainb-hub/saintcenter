@@ -980,5 +980,22 @@ if(LIBERADO){
 <script src="extras.js?v=15"></script>
 <script src="secretaria-conversa.js?v=1"></script>
 <script src="sync.js?v=1"></script>
+<script>
+/* atualiza sozinha quando sai uma versão nova (aba ou aplicativo aberto há muito tempo) */
+(function(){
+  const VERSAO = '2026-11-18-2';
+  async function checar(){
+    try{
+      const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
+      if(!j.v || j.v === VERSAO) return;
+      const k = 'sg-agenda-atualizou:' + j.v; if(sessionStorage.getItem(k)) return;
+      if(document.querySelector('dialog[open]') || (document.activeElement && /TEXTAREA|INPUT/.test(document.activeElement.tagName) && document.activeElement.value)) return;
+      sessionStorage.setItem(k, '1'); location.reload();
+    }catch(_){}
+  }
+  setInterval(checar, 5 * 60000);
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checar(); });
+})();
+</script>
 </body>
 </html>
