@@ -381,7 +381,7 @@ const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowe
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
 
-function usuario(){ try{ return JSON.parse(localStorage.getItem('sc-user') || 'null'); }catch(_){ return null; } }
+function usuario(){ try{ return JSON.parse(localStorage.getItem('sc-user') || 'null') || JSON.parse(localStorage.getItem('sg-agenda-app-usuario') || 'null'); }catch(_){ return null; } }
 function ehDona(u){
   if(!u) return false;
   if(u.email && DONA.emails.includes(norm(u.email).trim())) return true;
@@ -968,6 +968,7 @@ if(LIBERADO){
   window.addEventListener('storage', ev => { if(ev.key === CHAVE){ carregar(); render(); } });
 }
 </script>
-<script src="extras.js?v=13"></script>
+<script src="extras.js?v=14"></script>
+<script src="sync.js?v=1"></script>
 </body>
 </html>

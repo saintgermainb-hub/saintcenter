@@ -452,9 +452,40 @@
     r.onupgradeneeded = () => r.result.createObjectStore('arquivos');
     r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error);
   }));
-  const guardarArq = async (id, blob) => { const db = await abrirDBA(); return new Promise((ok, erro) => { const tx = db.transaction('arquivos', 'readwrite'); tx.objectStore('arquivos').put(blob, id); tx.oncomplete = ok; tx.onerror = () => erro(tx.error); }); };
-  const lerArq = async id => { const db = await abrirDBA(); return new Promise((ok, erro) => { const r = db.transaction('arquivos').objectStore('arquivos').get(id); r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error); }); };
-  const apagarArq = async id => { const db = await abrirDBA(); db.transaction('arquivos', 'readwrite').objectStore('arquivos').delete(id); };
+  const guardarLocal = async (id, blob) => { const db = await abrirDBA(); return new Promise((ok, erro) => { const tx = db.transaction('arquivos', 'readwrite'); tx.objectStore('arquivos').put(blob, id); tx.oncomplete = ok; tx.onerror = () => erro(tx.error); }); };
+  const lerLocal = async id => { const db = await abrirDBA(); return new Promise((ok, erro) => { const r = db.transaction('arquivos').objectStore('arquivos').get(id); r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error); }); };
+  // anexos também vão para o servidor (Google Drive da coordenação): o computador e o celular veem os mesmos arquivos
+  const KENV = CHAVE + ':anexos-no-servidor';
+  const enviados = () => { try{ return new Set(JSON.parse(localStorage.getItem(KENV) || '[]')); }catch(_){ return new Set(); } };
+  const marcarEnviado = id => { const e = enviados(); e.add(id); try{ localStorage.setItem(KENV, JSON.stringify([...e])); }catch(_){} };
+  const paraB64 = blob => new Promise((ok, erro) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => erro(r.error); r.readAsDataURL(blob); });
+  async function subirArq(id, blob){
+    if(!window.SG_nuvem || !SG_nuvem.ativo()) return false;
+    try{ await SG_nuvem.call('agendaAnexoSalvar', id, blob.name || '', blob.type || '', await paraB64(blob)); marcarEnviado(id); return true; }
+    catch(_){ return false; }
+  }
+  const guardarArq = async (id, blob) => { await guardarLocal(id, blob); subirArq(id, blob); };
+  const lerArq = async id => {
+    const b = await lerLocal(id).catch(() => null);
+    if(b || !window.SG_nuvem || !SG_nuvem.ativo()) return b;
+    try{
+      const r = await SG_nuvem.call('agendaAnexoLer', id); if(!r || !r.b64) return null;
+      const bin = atob(r.b64), u8 = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const blob = new Blob([u8], { type: r.tipo || 'application/octet-stream' });
+      guardarLocal(id, blob).catch(() => {});
+      return blob;
+    }catch(_){ return null; }
+  };
+  const apagarArq = async id => { const db = await abrirDBA(); db.transaction('arquivos', 'readwrite').objectStore('arquivos').delete(id); if(window.SG_nuvem && SG_nuvem.ativo()) SG_nuvem.call('agendaAnexoApagar', id).catch(() => {}); };
+  // leva para o servidor os anexos que ainda só estão neste aparelho (inclusive os antigos)
+  window.addEventListener('sg-agenda-sync', ev => {
+    if(!ev.detail || ev.detail.cls !== 'ok' || window.__sgReenviando) return;
+    const env = enviados();
+    const ids = DB.itens.flatMap(i => (i.anexos || []).map(a => a.id)).concat(DB.entradas.flatMap(e => (e.anexos || []).map(a => a.id))).filter(id => id && !env.has(id));
+    if(!ids.length) return;
+    window.__sgReenviando = true;
+    (async () => { for(const id of ids){ const b = await lerLocal(id).catch(() => null); if(b) await subirArq(id, b); } window.__sgReenviando = false; })();
+  });
 
   async function lerImagem(fonte, progresso){
     await usarLib(LIBS.ocr);
@@ -1172,11 +1203,10 @@
     rec.onend = () => { ouvindo = false; atualizarMic(); if($('secTxt').value.trim() && executarAoParar !== null) executarSecretaria(); executarAoParar = false; };
     try{ rec.start(); ouvindo = true; atualizarMic(); }catch(_){ toast('Não consegui abrir o microfone.'); }
   };
-  function executarSecretaria(){
-    const t = $('secTxt').value.trim(); if(!t) return;
+  function secretariaCore(t){
     const linhas = t.split(/\n|(?<=[.!?;])\s+|\s+(?:e também|e depois|e ainda)\s+/i).map(limparPedido).filter(l => l.length > 2);
     const achados = organizar(linhas.join('\n')).filter(p => p.incluir !== false && p.titulo.trim());
-    if(!achados.length){ toast('Não entendi. Diga o que é, quando e com quem.'); return; }
+    if(!achados.length) return [];
     const ent = uid(), feitos = [];
     achados.forEach(p => {
       const n = norm(p.orig || p.titulo);
@@ -1189,6 +1219,19 @@
     });
     DB.entradas.push({ id:ent, em:new Date().toISOString(), texto:t, gerados:feitos.length, via:'secretaria' });
     salvar(); render();
+    return feitos;
+  }
+  // usado pelo aplicativo do celular (Secretária no estilo WhatsApp)
+  window.SG_secretaria = {
+    anotar: t => secretariaCore(String(t || '').trim()).map(it => Object.assign({}, it)),
+    desfazer: id => { const n = DB.itens.length; DB.itens = DB.itens.filter(i => i.id !== id); if(DB.itens.length !== n){ salvar(); render(); return true; } return false; },
+    itens: () => DB.itens.slice(), status: it => status(it), ehReuniao: it => ehReuniao(it), tipoCurto: k => TIPO_CURTO[k] || k, fmtData: (d, c) => fmtData(d, c),
+    abrir: id => { const it = DB.itens.find(i => i.id === id); if(!it) return false; if(ehReuniao(it)) abrirReuniao(it); else abrirItem(it); return true; }
+  };
+  function executarSecretaria(){
+    const t = $('secTxt').value.trim(); if(!t) return;
+    const feitos = secretariaCore(t);
+    if(!feitos.length){ toast('Não entendi. Diga o que é, quando e com quem.'); return; }
     $('secTxt').value = '';
     $('secRes').insertAdjacentHTML('afterbegin', feitos.map(it => `<div class="r" data-sec="${it.id}"><div><div class="t">${esc(it.titulo)}</div>
       <div class="mut">${esc(TIPO_CURTO[it.tipo] || it.tipo)} · ${it.data ? esc(fmtData(it.data, true)) : 'sem data'}${it.hora ? ' · ' + esc(it.hora) : ''}${it.pessoa ? ' · ' + esc(it.pessoa) : ''}</div></div>
@@ -1239,4 +1282,38 @@
   };
 
   render();
+
+  /* ---------- anexos pelo aplicativo do celular ---------- */
+  window.SG_anexos = {
+    async guardar(file){ const id = uid(); await guardarArq(id, file); return id; },
+    ler: (file, progresso) => extrairTexto(file, file.name || '', progresso).then(t => /\.pdf$/i.test(file.name || '') ? refluir(t || '') : (t || '')),
+    reunioes: () => reunioesRecentes().filter(r => !r.feito).slice(0, 4).map(r => ({ id:r.id, rotulo:rotuloReuniao(r) })),
+    previa: t => { const linhas = String(t || '').split(/\n|(?<=[.!?;])\s+/).map(limparPedido).filter(l => l.length > 2); return organizar(linhas.join('\n')).filter(p => p.incluir !== false && p.titulo.trim()).map(p => ({ titulo:p.titulo.trim(), tipo:p.tipo, data:p.data, hora:p.hora })); },
+    async levar(reuniaoId, texto, anexos){
+      const it = DB.itens.find(i => i.id === reuniaoId); if(!it) return null;
+      await levarParaReuniao(it, '', anexos.map(a => ({ nome:a.nome, tipo:a.tipo, tamanho:a.tamanho, texto:a.texto, blobId:a.id })));
+      DB.entradas.push({ id:uid(), em:new Date().toISOString(), texto:texto || anexos.map(a => a.nome).join(', '), gerados:0, reuniao:it.id, anexosNomes:anexos.map(a => a.nome), via:'secretaria' });
+      salvar(); render(); return it.titulo;
+    },
+    criar(texto, anexos){
+      const feitos = secretariaCore(texto);
+      const ent = feitos.length && DB.entradas.find(e => e.id === feitos[0].entrada);
+      if(ent && anexos.length){ ent.anexos = anexos.map(a => ({ id:a.id, nome:a.nome })); ent.anexosNomes = anexos.map(a => a.nome); salvar(); render(); }
+      return feitos.map(it => Object.assign({}, it));
+    },
+    guardarSo(texto, anexos){
+      DB.entradas.push({ id:uid(), em:new Date().toISOString(), texto:texto || '', gerados:0, anexos:anexos.map(a => ({ id:a.id, nome:a.nome })), anexosNomes:anexos.map(a => a.nome), via:'secretaria' });
+      salvar(); render(); return true;
+    },
+    abrirReuniao: id => { const it = DB.itens.find(i => i.id === id); if(!it) return false; abrirReuniao(it); return true; },
+    abrirArquivo: async id => { const b = await lerArq(id); if(!b) return null; return URL.createObjectURL(b); }
+  };
+
+  /* ---------- dentro do aplicativo do celular ---------- */
+  if(/[?&]app=1/.test(location.search)){
+    document.documentElement.classList.add('modo-app');
+    const cssApp = document.createElement('style');
+    cssApp.textContent = `.modo-app .sec-fab,.modo-app .sec{display:none!important}.modo-app .sync-selo{display:none!important}`;
+    document.head.appendChild(cssApp);
+  }
 })();
