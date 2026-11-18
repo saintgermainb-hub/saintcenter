@@ -40,6 +40,8 @@ header{padding:calc(var(--topo) + 10px) 16px 0;background:#fff;border-bottom:1px
 .cab .nome span{font-size:11px;color:var(--g2);letter-spacing:.04em}
 .cab .nome span.on::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rosa);margin-right:6px;vertical-align:1px}
 .abas{display:flex;gap:22px;margin-top:10px}
+.sino{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:8px 12px;background:#fff;color:var(--g1)}
+.sino svg{width:15px;height:15px;color:var(--pink)}
 .abas button{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--g3);padding:9px 0 10px;border-bottom:2px solid transparent}
 .abas button.on{color:var(--fg);border-color:var(--pink)}
 
@@ -138,6 +140,7 @@ footer{background:#fff;border-top:1px solid #f6e2ee;padding:8px 10px calc(var(--
         <path d="M29 26 L20 44 L26 42 L29 47 L32 28 Z" fill="#ff3ea5"/><path d="M35 26 L44 44 L38 42 L35 47 L32 28 Z" fill="#ff3ea5"/><rect x="27" y="18" width="10" height="10" rx="4" fill="#ff1fb4"/>
       </svg>
       <div class="nome"><b>Secretária</b><span id="estado">conectando…</span></div>
+      <button type="button" class="sino" id="sino" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Ativar avisos</button>
     </div>
     <nav class="abas"><button type="button" class="on" data-aba="conversa">Conversa</button><button type="button" data-aba="agenda">Agenda</button></nav>
   </header>
@@ -206,7 +209,7 @@ $('fEntrar').addEventListener('submit', async e => {
     const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({ fn:'agendaEntrar', args:[$('eLogin').value.trim(), $('eSenha').value] }) });
     const j = await r.json();
     if(!j.ok) throw new Error(/desconhecida/i.test(j.erro || '') ? 'O servidor ainda não foi atualizado para o aplicativo. Fale com a coordenação.' : j.erro);
-    localStorage.setItem(K_COD, j.resultado.codigo);
+    localStorage.setItem(K_COD, j.resultado.codigo); guardarCodigoSW(j.resultado.codigo);
     localStorage.setItem(K_USU, JSON.stringify(j.resultado.usuario));
     $('eSenha').value = '';
     $('entrar').hidden = true;
@@ -238,6 +241,7 @@ $('agenda').addEventListener('load', () => {
     $('estado').textContent = /sincronizado/.test(t) ? 'online · agenda em dia' : /salvando/.test(t) ? 'online · salvando…' : /so neste/.test(t) ? 'online · só neste celular' : String(d.txt || '').toLowerCase();
   });
   boasVindas();
+  setTimeout(() => avisarNaConversa(/[?&]aviso=1/.test(location.search)), 800);
 });
 
 /* ---------- conversa ---------- */
@@ -516,9 +520,60 @@ $('acao').addEventListener('click', () => {
 $('cancelar').addEventListener('click', () => encerrar(false));
 botao();
 
+
+/* ---------- avisos no celular (notificações) ---------- */
+const VAPID = 'BK8HANArRiDqmT4YT6r5wRxymIFVCGWpGbJcnNjwDGs_h8YDaHLVyPkbL03o0-CsmpZx9H4QmDjPi6LO6p64gLo';
+async function chamar(fn, ...args){
+  const r = await fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({ fn, args:[localStorage.getItem(K_COD) || ''].concat(args) }) });
+  const j = await r.json(); if(!j.ok) throw new Error(j.erro || 'Erro'); return j.resultado;
+}
+function guardarCodigoSW(cod){
+  try{ const r = indexedDB.open('sg-secretaria', 1); r.onupgradeneeded = () => r.result.createObjectStore('cfg'); r.onsuccess = () => { try{ r.result.transaction('cfg', 'readwrite').objectStore('cfg').put(cod, 'codigo'); }catch(_){} }; }catch(_){}
+}
+const chaveVapid = () => { const b = atob(VAPID.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - VAPID.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+const temPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+async function inscrever(pedir){
+  if(!temPush()) return false;
+  if(pedir){ const r = await Notification.requestPermission(); if(r !== 'granted') return false; }
+  if(Notification.permission !== 'granted') return false;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: chaveVapid() });
+  await chamar('agendaPushInscrever', sub.toJSON());
+  return true;
+}
+function prepararSino(){
+  const b = $('sino');
+  if(!temPush()){ b.hidden = !ios; b.onclick = () => aviso('Para receber avisos, adicione a Secretária à Tela de Início e abra por lá.'); return; }
+  if(Notification.permission === 'granted'){ b.hidden = true; inscrever(false).catch(() => {}); return; }
+  b.hidden = Notification.permission === 'denied' ? false : false;
+  b.onclick = async () => {
+    if(Notification.permission === 'denied'){ aviso('Os avisos estão bloqueados. Libere em Ajustes > Notificações > Secretária.'); return; }
+    b.disabled = true;
+    try{
+      if(await inscrever(true)){ b.hidden = true; aviso('Avisos ligados.'); chamar('agendaAvisoTeste').catch(() => {}); }
+      else aviso('Os avisos não foram liberados.');
+    }catch(e){ aviso('Não consegui ligar os avisos agora. Tente de novo.'); }
+    b.disabled = false;
+  };
+}
+// a Secretária também avisa dentro da conversa quando você abre o app
+function avisarNaConversa(forcar){
+  if(!SEC || !SEC.avisos) return;
+  const a = SEC.avisos(); if(!a.texto) return;
+  const k = 'sg-agenda-app-ultimo-aviso', hoje = iso(new Date()), marca = hoje + '|' + a.texto;
+  if(!forcar && localStorage.getItem(k) === marca) return;
+  localStorage.setItem(k, marca);
+  const ids = a.atrasadas.concat(a.vencem, a.eventos).slice(0, 8);
+  falar('ela', a.texto, { cards: ids.map(id => { const it = SEC.itens().find(i => i.id === id) || { id, titulo:'' }; return { id, titulo: it.titulo }; }) });
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if(ev.data && ev.data.aviso){ trocarAba('conversa'); avisarNaConversa(true); } });
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') setTimeout(() => avisarNaConversa(false), 1500); });
+
 /* ---------- início ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-if(localStorage.getItem(K_COD)) iniciar(); else pedirLogin();
+if(localStorage.getItem(K_COD)){ guardarCodigoSW(localStorage.getItem(K_COD)); iniciar(); } else pedirLogin();
+prepararSino();
 desenhar();
 </script>
 </body>
