@@ -1151,35 +1151,42 @@
     .sec-fab{position:fixed;right:22px;bottom:22px;z-index:40;display:flex;align-items:center;gap:8px;border-radius:999px;padding:10px 18px 10px 12px;background:#fff;border:1px solid #f2d3e6;box-shadow:0 14px 30px -12px rgba(255,62,165,.55);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--fg)}
     .sec-fab:hover{border-color:var(--pink)}
     .sec-fab .laco{width:28px;height:21px}
-    .sec{position:fixed;right:22px;bottom:84px;z-index:41;width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid #f4dcea;border-radius:22px;box-shadow:0 30px 70px -24px rgba(255,62,165,.5);padding:18px;display:grid;gap:12px}
-    .sec-cab{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .sec{position:fixed;right:22px;bottom:84px;z-index:41;width:min(420px,calc(100vw - 32px));height:min(600px,calc(100vh - 120px));background:#fff;border:1px solid #f4dcea;border-radius:22px;box-shadow:0 30px 70px -24px rgba(255,62,165,.5);padding:16px;display:flex;flex-direction:column;gap:10px}
+    .sec[hidden]{display:none}
+    .sec-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none}
     .sec-cab h3{font-weight:400;font-size:18px;letter-spacing:.04em;margin:0;display:flex;align-items:center;gap:8px}
     .sec-cab button{font-size:18px;color:var(--g2);padding:0 6px}
     .sec .mut{font-size:12px;line-height:1.5}
-    .sec-mic{display:flex;align-items:center;gap:12px}
-    .sec-mic button.mic{width:56px;height:56px;border-radius:50%;background:var(--grad);color:#fff;font-size:22px;flex:none;box-shadow:0 10px 22px -8px rgba(255,62,165,.6)}
-    .sec-mic button.mic.on{animation:neon 1.1s ease-in-out infinite;background:var(--pink)}
-    .sec textarea{min-height:84px;border-radius:14px;background:var(--rosa-bg);border-color:#f7d3e9}
-    .sec-acoes{display:flex;justify-content:flex-end;gap:8px}
-    .sec-res{display:grid;gap:8px;max-height:320px;overflow:auto}
-    .sec-res .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid #f4dcea;border-radius:12px;padding:8px 10px}
-    .sec-res .r .t{font-size:13px;line-height:1.35}
-    .sec-res .r .mut{font-size:11px}
-    .sec-res .r .bts{display:flex;gap:4px}
-    .sec-res .r .bts button{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px;color:var(--g1);background:#fff}
-    .sec-res .r-conv{display:grid;gap:6px;border-bottom:1px solid #f6e2ee;padding-bottom:8px}
-    .sec-res .r-conv>.bts button{font-size:11px;border:1px solid #f2d3e6;border-radius:12px;padding:6px 10px;color:var(--fg);background:#fff;text-align:left}
-    .sec-res .r-conv>.bts button:disabled{opacity:.5}
+    .sec-res{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px}
+    .sec-msg{max-width:86%;border-radius:16px;padding:9px 12px;font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+    .sec-msg.eu{align-self:flex-end;background:var(--rosa-bg);border:1px solid #f7d3e9;border-bottom-right-radius:4px}
+    .sec-msg.ela{align-self:flex-start;background:#fff;border:1px solid #efe7ee;border-bottom-left-radius:4px;display:grid;gap:8px}
+    .sec-msg .r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid #f4dcea;border-radius:12px;padding:7px 9px;white-space:normal}
+    .sec-msg .r .t{font-size:13px;line-height:1.35}
+    .sec-msg .r .mut{font-size:11px}
+    .sec-msg .bts{display:flex;gap:4px;flex-wrap:wrap;white-space:normal}
+    .sec-msg .r .bts button{font-size:9px;letter-spacing:.12em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px;color:var(--g1);background:#fff}
+    .sec-msg>.bts button{font-size:12px;border:1px solid #f2d3e6;border-radius:999px;padding:6px 12px;color:var(--fg);background:#fff}
+    .sec-msg>.bts button:hover:not(:disabled){border-color:var(--pink)}
+    .sec-msg>.bts button:disabled{opacity:.45}
+    .sec-msg .hr{font-size:9px;color:#aea9b4;letter-spacing:.08em}
+    .sec-digitando{align-self:flex-start;font-size:11px;color:#aea9b4;letter-spacing:.1em}
+    .sec-base{flex:none;display:flex;align-items:flex-end;gap:8px;border-top:1px solid #f6e2ee;padding-top:10px}
+    .sec-base button.mic{width:42px;height:42px;border-radius:50%;background:var(--grad);color:#fff;font-size:18px;flex:none;box-shadow:0 8px 18px -8px rgba(255,62,165,.6)}
+    .sec-base button.mic.on{animation:neon 1.1s ease-in-out infinite;background:var(--pink)}
+    .sec-base textarea{flex:1;min-height:42px;max-height:120px;resize:none;border-radius:14px;background:var(--rosa-bg);border-color:#f7d3e9;padding:10px 12px;font-size:13px}
+    .sec-base .btn{flex:none;height:42px}
+    .sec-dica{flex:none;font-size:10px;color:#aea9b4;letter-spacing:.06em;min-height:0}
   `;
   document.head.appendChild(cssS);
   document.body.insertAdjacentHTML('beforeend', `<button class="sec-fab" id="secAbrir" title="Fale ou escreva e a secretária coloca na agenda">${LACO}Secretária</button>
   <section class="sec" id="sec" hidden aria-label="Secretária">
     <div class="sec-cab"><h3>${LACO}Secretária</h3><button type="button" id="secFechar" aria-label="Fechar">×</button></div>
-    <div class="sec-mic"><button type="button" class="mic" id="secMic" aria-label="Falar">🎙</button>
-      <span class="mut" id="secDica">Toque no microfone e fale, ou escreva abaixo. Ex.: “coloca na minha agenda que dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”.</span></div>
-    <textarea id="secTxt" placeholder="Fale comigo: anotar, adiar, desmarcar, perguntar…"></textarea>
-    <div class="sec-acoes"><button class="btn" id="secOk">Enviar</button></div>
     <div class="sec-res" id="secRes"></div>
+    <div class="sec-dica" id="secDica"></div>
+    <div class="sec-base"><button type="button" class="mic" id="secMic" aria-label="Falar">🎙</button>
+      <textarea id="secTxt" rows="1" placeholder="Converse comigo…"></textarea>
+      <button class="btn" id="secOk">Enviar</button></div>
   </section>`);
   // tira o pedido ("coloca na minha agenda que…") e deixa só o compromisso
   function limparPedido(l){
@@ -1191,7 +1198,7 @@
   }
   let ouvindo = false, rec = null, executarAoParar = false;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  function atualizarMic(){ $('secMic').classList.toggle('on', ouvindo); $('secMic').setAttribute('aria-label', ouvindo ? 'Parar' : 'Falar'); $('secDica').textContent = ouvindo ? 'Ouvindo… fale com calma. Toque de novo para terminar.' : 'Toque no microfone e fale, ou escreva abaixo.'; }
+  function atualizarMic(){ $('secMic').classList.toggle('on', ouvindo); $('secMic').setAttribute('aria-label', ouvindo ? 'Parar' : 'Falar'); $('secDica').textContent = ouvindo ? 'Ouvindo… fale com calma. Toque de novo para terminar.' : ''; }
   $('secMic').onclick = () => {
     if(ouvindo){ executarAoParar = true; rec && rec.stop(); return; }
     if(!SR){ toast('Este navegador não tem ditado. No Windows, use a tecla Windows + H dentro do campo.'); $('secTxt').focus(); return; }
@@ -1233,31 +1240,50 @@
   };
   // resposta da secretária que conversa (secretaria-conversa.js): texto, itens e botões
   const SEC_OPS = {};
+  const horaAgora = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  function rolarFim(){ const el = $('secRes'); el.scrollTop = el.scrollHeight; }
+  function balaoEu(t){ $('secRes').insertAdjacentHTML('beforeend', `<div class="sec-msg eu">${esc(t)}<div class="hr" style="text-align:right">${horaAgora()}</div></div>`); rolarFim(); }
   function mostrarConversa(pedido, r){
+    if(pedido) balaoEu(pedido);
     const ops = (r.opcoes || []).map(o => { const k = uid(); SEC_OPS[k] = o.acao; return `<button type="button" data-sec-op="${k}">${esc(o.rotulo)}${o.sub ? ' · ' + esc(o.sub) : ''}</button>`; }).join('');
     const cards = (r.cards || []).map(c => { const k = uid(); SEC_OPS[k] = c; const it = DB.itens.find(i => i.id === c.id) || c;
       return `<div class="r" data-sec="${esc(c.id)}"><div><div class="t">${esc(it.titulo)}</div><div class="mut">${c.apagado ? 'Desmarcado' : esc(TIPO_CURTO[it.tipo] || it.tipo || '') + ' · ' + (it.data ? esc(fmtData(it.data, true)) : 'sem data') + (it.hora ? ' · ' + esc(it.hora) : '')}</div></div>
         <div class="bts">${c.apagado ? '' : `<button type="button" data-sec-abrir="${esc(c.id)}">Abrir</button>`}${c.podeDesfazer ? `<button type="button" data-sec-desf="${k}">Desfazer</button>` : ''}</div></div>`; }).join('');
-    $('secRes').insertAdjacentHTML('afterbegin', `<div class="r-conv"><div class="mut" style="text-align:right">${esc(pedido)}</div><div class="t" style="white-space:pre-wrap;font-size:13px;line-height:1.45">${esc(r.texto)}</div>${cards}${ops ? `<div class="bts" style="display:flex;flex-wrap:wrap;gap:4px">${ops}</div>` : ''}</div>`);
+    $('secRes').insertAdjacentHTML('beforeend', `<div class="sec-msg ela"><div>${esc(r.texto)}</div>${cards}${ops ? `<div class="bts">${ops}</div>` : ''}<div class="hr">${horaAgora()}</div></div>`);
+    rolarFim();
+  }
+  // ao abrir pela primeira vez, ela cumprimenta
+  function saudar(){
+    if($('secRes').children.length || !(window.SG_secretaria && SG_secretaria.conversar)) return;
+    const h = new Date().getHours();
+    try{ mostrarConversa('', SG_secretaria.conversar(h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite')); }catch(_){}
   }
   function executarSecretaria(){
     const t = $('secTxt').value.trim(); if(!t) return;
-    if(window.SG_secretaria && window.SG_secretaria.conversar){ $('secTxt').value = ''; mostrarConversa(t, window.SG_secretaria.conversar(t)); return; }
+    if(window.SG_secretaria && window.SG_secretaria.conversar){
+      $('secTxt').value = ''; ajustarSec(); balaoEu(t);
+      let r; try{ r = window.SG_secretaria.conversar(t); }catch(_){ r = { texto:'Tive um problema para entender agora. Pode repetir de outro jeito?' }; }
+      $('secRes').insertAdjacentHTML('beforeend', '<div class="sec-digitando" id="secDig">digitando…</div>'); rolarFim();
+      setTimeout(() => { const d = $('secDig'); d && d.remove(); mostrarConversa('', r); }, 350);
+      return;
+    }
     const feitos = secretariaCore(t);
     if(!feitos.length){ toast('Não entendi. Diga o que é, quando e com quem.'); return; }
     $('secTxt').value = '';
-    $('secRes').insertAdjacentHTML('afterbegin', feitos.map(it => `<div class="r" data-sec="${it.id}"><div><div class="t">${esc(it.titulo)}</div>
+    $('secRes').insertAdjacentHTML('beforeend', feitos.map(it => `<div class="r" data-sec="${it.id}"><div><div class="t">${esc(it.titulo)}</div>
       <div class="mut">${esc(TIPO_CURTO[it.tipo] || it.tipo)} · ${it.data ? esc(fmtData(it.data, true)) : 'sem data'}${it.hora ? ' · ' + esc(it.hora) : ''}${it.pessoa ? ' · ' + esc(it.pessoa) : ''}</div></div>
       <div class="bts"><button type="button" data-sec-abrir="${it.id}">Abrir</button><button type="button" data-sec-desfazer="${it.id}">Desfazer</button></div></div>`).join(''));
     toast(feitos.length === 1 ? 'Coloquei na sua agenda: ' + feitos[0].titulo + '.' : 'Coloquei ' + feitos.length + ' itens na sua agenda.');
   }
   $('secOk').onclick = executarSecretaria;
   $('secTxt').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); executarSecretaria(); } });
-  $('secAbrir').onclick = () => { $('sec').hidden = !$('sec').hidden; if(!$('sec').hidden) $('secTxt').focus(); };
+  function ajustarSec(){ const t = $('secTxt'); t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; }
+  $('secTxt').addEventListener('input', ajustarSec);
+  $('secAbrir').onclick = () => { $('sec').hidden = !$('sec').hidden; if(!$('sec').hidden){ saudar(); rolarFim(); $('secTxt').focus(); } };
   $('secFechar').onclick = () => { if(ouvindo){ executarAoParar = null; rec && rec.stop(); } $('sec').hidden = true; };
   $('secRes').addEventListener('click', e => {
     const op = e.target.closest('[data-sec-op]');
-    if(op && window.SG_secretaria && SG_secretaria.executar){ const a = SEC_OPS[op.dataset.secOp]; op.parentElement.querySelectorAll('button').forEach(b => b.disabled = true); mostrarConversa(op.textContent, SG_secretaria.executar(a)); return; }
+    if(op && window.SG_secretaria && SG_secretaria.executar){ const a = SEC_OPS[op.dataset.secOp]; op.parentElement.querySelectorAll('button').forEach(b => b.disabled = true); op.style.borderColor = 'var(--pink)'; mostrarConversa(op.textContent, SG_secretaria.executar(a)); return; }
     const df = e.target.closest('[data-sec-desf]');
     if(df && window.SG_secretaria && SG_secretaria.desfazerCard){ SG_secretaria.desfazerCard(SEC_OPS[df.dataset.secDesf]); df.remove(); toast('Desfeito.'); return; }
     const d = e.target.closest('[data-sec-desfazer]');
