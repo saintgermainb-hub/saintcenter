@@ -1309,6 +1309,138 @@
     abrirArquivo: async id => { const b = await lerArq(id); if(!b) return null; return URL.createObjectURL(b); }
   };
 
+  /* ---------- X para só fechar (consulta), em todas as janelas ---------- */
+  const cssX = document.createElement('style');
+  cssX.textContent = `
+    dialog{position:relative}
+    .dlg-x{position:sticky;top:12px;float:right;margin:12px 14px -50px 0;z-index:6;width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid #f2d3e6;color:var(--g2);font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 16px -10px rgba(255,62,165,.6)}
+    .dlg-x:hover{border-color:var(--pink);color:var(--fg)}
+  `;
+  document.head.appendChild(cssX);
+  function poeX(dlg){
+    if(!dlg || dlg.querySelector(':scope > .dlg-x')) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dlg-x'; b.title = 'Fechar'; b.setAttribute('aria-label', 'Fechar'); b.textContent = '×';
+    b.onclick = () => { if(dlg.id === 'dlgReuniao' && $('rqFechar')) $('rqFechar').click(); else { dlg.close(); try{ render(); }catch(_){} } };
+    dlg.prepend(b);
+  }
+  document.querySelectorAll('dialog').forEach(poeX);
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if(n.nodeName === 'DIALOG') poeX(n); else if(n.querySelectorAll) n.querySelectorAll('dialog').forEach(poeX); }))).observe(document.body, { childList:true, subtree:true });
+
+  /* ---------- Busca: digite um assunto e encontre a reunião, tarefa, anotação ou texto ---------- */
+  const cssB = document.createElement('style');
+  cssB.textContent = `
+    .busca{position:relative;margin:0 0 16px}
+    .busca .cx{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #f2d3e6;border-radius:999px;padding:4px 8px 4px 16px;box-shadow:0 10px 26px -18px rgba(255,62,165,.55)}
+    .busca .cx:focus-within{border-color:var(--rosa);box-shadow:0 0 0 3px var(--rosa-claro)}
+    .busca .cx svg{width:18px;height:18px;color:var(--pink);flex:none}
+    .busca input{border:0;box-shadow:none!important;padding:10px 0;background:transparent;font-size:14px}
+    .busca .limpar{font-size:20px;color:var(--g3);padding:0 8px}
+    .busca-res{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:35;background:#fff;border:1px solid #f4dcea;border-radius:18px;box-shadow:0 30px 70px -24px rgba(255,62,165,.45);max-height:min(70vh,560px);overflow:auto;padding:8px}
+    .busca-res .r{display:block;width:100%;text-align:left;border-radius:12px;padding:10px 12px;border:1px solid transparent}
+    .busca-res .r:hover,.busca-res .r:focus{background:var(--rosa-bg);border-color:#f7d3e9;outline:none}
+    .busca-res .t{font-size:14px;line-height:1.35}
+    .busca-res .m{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--g2);margin-top:3px}
+    .busca-res .m b{font-weight:400;color:var(--pink)}
+    .busca-res .s{font-size:12px;color:var(--g1);line-height:1.5;margin-top:4px}
+    .busca-res mark{background:#ffe3f3;color:inherit;border-radius:3px;padding:0 1px}
+    .busca-res .vz{padding:14px;font-size:13px;color:var(--g2)}
+    .nota.achada{animation:achada 2.2s ease-out 1;border-color:var(--pink)!important}
+    @keyframes achada{0%,40%{box-shadow:0 0 0 4px var(--rosa-claro)}100%{box-shadow:none}}
+  `;
+  document.head.appendChild(cssB);
+  document.querySelector('nav.abas').insertAdjacentHTML('beforebegin', `<div class="busca" id="busca">
+    <div class="cx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+    <input id="buscaTxt" type="text" placeholder="Buscar um assunto: troca, Loggi, Reclame Aqui, Vitória…" autocomplete="off" enterkeyhint="search" aria-label="Buscar na agenda">
+    <button type="button" class="limpar" id="buscaLimpar" aria-label="Limpar busca" hidden>×</button></div>
+    <div class="busca-res" id="buscaRes" hidden></div></div>`);
+  const PARADAS = new Set('a o e de da do das dos em no na nos nas um uma uns umas que quando como onde qual quais para pra pro com sem por pelo pela ao aos as os se foi era ser ter tem the mais menos sobre isso essa esse esta este aquele aquela nos eu voce ja muito pouco'.split(' '));
+  const SINONIMOS = [
+    ['processo','sistema','fluxo','forma','regra','politica','procedimento','pop','metodo'],
+    ['novo','nova','novos','novas','mudanca','mudamos','mudou','mudar','alteracao','alteramos','atualizacao','implantacao','implantar','automatica','automatico'],
+    ['troca','trocas','devolucao','devolucoes','reembolso','estorno','saintrocas'],
+    ['reclamacao','reclamacoes','reclame','ra'],
+    ['rastreio','rastreamento','entrega','transportadora','frete'],
+    ['reuniao','alinhamento','encontro','call']
+  ];
+  const raiz = w => w.length <= 4 ? w : w.slice(0, Math.max(4, w.length - 3));
+  const palavras = t => norm(t).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(w => w.length >= 2 && !PARADAS.has(w));
+  function trechos(it){
+    const out = [];
+    const add = (rot, txt, extra) => { String(txt || '').split(/\n+/).map(x => x.trim()).filter(Boolean).forEach(l => out.push(Object.assign({ rot, txt:l }, extra || {}))); };
+    add('Título', it.titulo); add('Pessoa', it.pessoa); add('Notas', it.notas);
+    (it.sub || []).forEach(x => add('Subtarefa', x.t));
+    (it.pauta || []).forEach(x => add('Pauta', x.t));
+    add('Anotações', it.anotacoes, { campo:'anotacoes' }); add('Resumo', typeof it.resumo === 'string' ? it.resumo : '');
+    (it.anexos || []).forEach(a => { add('Anexo', a.nome); add('Anexo · ' + a.nome, a.texto); });
+    return out;
+  }
+  function buscar(q){
+    const qs = [...new Set(palavras(q))]; if(!qs.length) return [];
+    // cada palavra procurada vale também pelos seus parecidos (processo ≈ sistema/fluxo, novo ≈ mudança…)
+    const alts = qs.map(w => { const g = SINONIMOS.find(g => g.some(x => raiz(x) === raiz(w) || w.startsWith(raiz(x)))); return [...new Set((g || []).concat(w).map(raiz))]; });
+    const ws = [...new Set(alts.flat())];
+    const precisa = qs.length <= 2 ? qs.length : Math.ceil(qs.length / 3);
+    const bate = (r, p) => p.startsWith(r) || (r.length >= 5 && p.length >= 4 && r.startsWith(p));
+    const casa = t => { const ps = palavras(t); return alts.map((a, i) => a.some(r => ps.some(p => bate(r, p))) ? i : -1).filter(i => i >= 0); };
+    const res = [];
+    const avaliar = (fonte, partes, base) => {
+      const todos = new Set(); let melhor = null, mq = 0;
+      partes.forEach(pt => { const c = casa(pt.txt); c.forEach(x => todos.add(x)); const sc = c.length + (pt.rot === 'Título' ? .5 : 0); if(sc > mq){ mq = sc; melhor = pt; } });
+      if(todos.size < precisa || !melhor) return;
+      res.push(Object.assign({ score: todos.size * 3 + mq, trecho: melhor }, base, { fonte }));
+    };
+    DB.itens.forEach(it => avaliar('item', trechos(it), { it, data: it.data || (it.criadoEm || '').slice(0, 10) }));
+    DB.entradas.forEach(e => avaliar('entrada', String(e.texto || '').split(/\n+/).map(x => ({ rot:'Caixa de entrada', txt:x.trim() })).filter(x => x.txt).concat((e.anexosNomes || []).map(n => ({ rot:'Anexo', txt:n }))), { e, data: (e.em || '').slice(0, 10) }));
+    return res.sort((a, b) => b.score - a.score || String(b.data).localeCompare(String(a.data))).slice(0, 30).map(r => Object.assign(r, { ws }));
+  }
+  function marcar(txt, ws){
+    let t = String(txt); if(t.length > 220){ const n = norm(t), i = Math.max(0, Math.min(...ws.map(w => { const k = n.indexOf(w); return k < 0 ? 1e9 : k; })) - 60); t = (i > 0 ? '…' : '') + t.slice(i, i + 220) + '…'; }
+    return esc(t).replace(/[A-Za-zÀ-ÿ0-9]+/g, w => ws.some(r => norm(w).startsWith(r)) ? '<mark>' + w + '</mark>' : w);
+  }
+  let ACHADOS = [];
+  function desenharBusca(){
+    const q = $('buscaTxt').value.trim(); $('buscaLimpar').hidden = !q;
+    if(q.length < 2){ $('buscaRes').hidden = true; return; }
+    ACHADOS = buscar(q);
+    $('buscaRes').hidden = false;
+    $('buscaRes').innerHTML = ACHADOS.length ? ACHADOS.map((r, i) => {
+      const tit = r.fonte === 'item' ? r.it.titulo : 'Texto da Caixa de entrada';
+      const tipo = r.fonte === 'item' ? (TIPO_CURTO[r.it.tipo] || r.it.tipo) : 'Caixa de entrada';
+      const quando = r.data ? fmtData(r.data, true) : 'sem data';
+      return `<button type="button" class="r" data-achado="${i}"><div class="t">${marcar(tit, r.ws)}</div><div class="m"><b>${esc(tipo)}</b> · ${esc(quando)}${r.fonte === 'item' && r.it.hora ? ' · ' + esc(r.it.hora) : ''} · encontrado em ${esc(r.trecho.rot)}</div>${r.trecho.rot !== 'Título' ? `<div class="s">${marcar(r.trecho.txt, r.ws)}</div>` : ''}</button>`;
+    }).join('') : `<div class="vz">Nada encontrado para “${esc(q)}”. Tente outra palavra (ex.: troca, devolução, Loggi).</div>`;
+  }
+  function abrirAchado(r){
+    $('buscaRes').hidden = true;
+    if(r.fonte === 'entrada'){
+      const ab = document.querySelector('nav.abas [data-aba="entrada"]'); if(ab) ab.click();
+      setTimeout(() => { const bt = document.querySelector(`[data-reorg="${r.e.id}"]`); const nota = bt && bt.closest('.nota'); if(nota){ nota.scrollIntoView({ behavior:'smooth', block:'center' }); nota.classList.remove('achada'); void nota.offsetWidth; nota.classList.add('achada'); } }, 80);
+      return;
+    }
+    const it = DB.itens.find(i => i.id === r.it.id); if(!it) return;
+    if(ehReuniao(it)){
+      abrirReuniao(it);
+      setTimeout(() => {
+        if(r.trecho.campo === 'anotacoes'){ const ta = $('rqNotas'), k = ta.value.indexOf(r.trecho.txt); if(k >= 0){ ta.focus(); ta.setSelectionRange(k, k + r.trecho.txt.length); const linhas = ta.value.slice(0, k).split('\n').length; ta.scrollTop = Math.max(0, (linhas - 3) * 22); ta.scrollIntoView({ block:'nearest' }); } }
+        else if(r.trecho.rot === 'Pauta'){ const alvo = [...document.querySelectorAll('#dlgReuniao input, #dlgReuniao textarea')].find(x => x.value === r.trecho.txt); if(alvo){ alvo.scrollIntoView({ block:'center' }); alvo.style.boxShadow = '0 0 0 3px #ffe3f3'; setTimeout(() => alvo.style.boxShadow = '', 2500); } }
+      }, 120);
+    } else abrirItem(it);
+  }
+  let tBusca = null;
+  $('buscaTxt').addEventListener('input', () => { clearTimeout(tBusca); tBusca = setTimeout(desenharBusca, 160); });
+  $('buscaTxt').addEventListener('focus', () => { if($('buscaTxt').value.trim().length >= 2) desenharBusca(); });
+  $('buscaTxt').addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ $('buscaTxt').value = ''; desenharBusca(); }
+    if(e.key === 'Enter' && ACHADOS[0]){ e.preventDefault(); abrirAchado(ACHADOS[0]); }
+    if(e.key === 'ArrowDown'){ const b = $('buscaRes').querySelector('.r'); if(b){ e.preventDefault(); b.focus(); } }
+  });
+  $('buscaRes').addEventListener('click', e => { const b = e.target.closest('[data-achado]'); if(b) abrirAchado(ACHADOS[+b.dataset.achado]); });
+  $('buscaLimpar').onclick = () => { $('buscaTxt').value = ''; desenharBusca(); $('buscaTxt').focus(); };
+  document.addEventListener('click', e => { if(!e.target.closest('#busca')) $('buscaRes').hidden = true; });
+  // a Secretária do celular também busca
+  if(window.SG_secretaria) window.SG_secretaria.buscar = q => buscar(q).map(r => ({ fonte:r.fonte, id: r.fonte === 'item' ? r.it.id : r.e.id, titulo: r.fonte === 'item' ? r.it.titulo : 'Caixa de entrada', onde: r.trecho.rot, trecho: r.trecho.txt }));
+
   /* ---------- dentro do aplicativo do celular ---------- */
   if(/[?&]app=1/.test(location.search)){
     document.documentElement.classList.add('modo-app');
