@@ -13,6 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icone-192.png">
 <link rel="apple-touch-icon" href="icone-180.png">
+<link rel="preconnect" href="https://script.google.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&display=swap">
 <style>
 :root{
@@ -225,7 +226,7 @@ function agendaWin(){ try{ return $('agenda').contentWindow; }catch(_){ return n
 function iniciar(){
   $('estado').textContent = 'conectando…'; $('estado').className = '';
   carregada = false; SEC = null;
-  $('agenda').src = '../agenda/?app=1&t=' + Date.now();
+  $('agenda').src = '../agenda/?app=1';
 }
 $('agenda').addEventListener('load', () => {
   const w = agendaWin(); if(!w || !w.document) return;
@@ -241,13 +242,14 @@ $('agenda').addEventListener('load', () => {
     $('estado').textContent = /sincronizado/.test(t) ? 'online · agenda em dia' : /salvando/.test(t) ? 'online · salvando…' : /so neste/.test(t) ? 'online · só neste celular' : String(d.txt || '').toLowerCase();
   });
   boasVindas();
+  const fila = FILA.splice(0); fila.forEach(f => responder(f.texto));
   setTimeout(() => avisarNaConversa(/[?&]aviso=1/.test(location.search)), 800);
 });
 
 /* ---------- conversa ---------- */
 let CHAT = []; try{ CHAT = JSON.parse(localStorage.getItem(K_CHAT) || '[]'); }catch(_){}
 CHAT.forEach(m => { if(m.de === 'ela' && /Márcia da Loggi|buscar troca e devolução/.test(m.texto || '')) m.texto = m.texto.replace(/“dia 8\/12[^”]*”/, '“dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”').replace('“buscar troca e devolução”', '“buscar orçamento”'); });
-function guardarChat(){ CHAT = CHAT.slice(-300); try{ localStorage.setItem(K_CHAT, JSON.stringify(CHAT)); }catch(_){} }
+function guardarChat(){ CHAT = CHAT.slice(-200); try{ localStorage.setItem(K_CHAT, JSON.stringify(CHAT)); }catch(_){} }
 const horaDe = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 function rotDia(ms){
   const d = new Date(ms), h = new Date(); h.setHours(0,0,0,0); const x = new Date(d); x.setHours(0,0,0,0);
@@ -268,18 +270,25 @@ function pillDe(it){
   if(s === 'hoje') return '<span class="pill hoje">Hoje</span>';
   return '';
 }
-function cardHtml(c){
-  const it = SEC && SEC.itens().find(i => i.id === c.id) || c;
-  const sumiu = SEC && !SEC.itens().some(i => i.id === c.id);
+let MAPA = null;
+function cardHtml(c, i, j){
+  const it = MAPA && MAPA.get(c.id) || c;
+  const sumiu = MAPA && !MAPA.has(c.id);
+  if(c.apagado && !c.desfeito) return `<div class="card"><div class="t">${esc(c.titulo)}</div><div class="q">Desmarcado</div><div class="bts">${c.podeDesfazer ? `<button type="button" data-desfazer="${esc(c.id)}" data-m="${i}" data-c="${j}">Desfazer</button>` : ''}</div></div>`;
   return `<div class="card${c.desfeito || sumiu ? ' desfeito' : ''}"><div class="t">${esc(it.titulo)}${sumiu ? '' : pillDe(it)}</div><div class="q">${quando(it)}</div>
-    <div class="bts"><button type="button" data-abrir="${esc(c.id)}">Abrir</button>${c.podeDesfazer ? `<button type="button" data-desfazer="${esc(c.id)}">Desfazer</button>` : ''}</div></div>`;
+    <div class="bts"><button type="button" data-abrir="${esc(c.id)}">Abrir</button>${c.podeDesfazer ? `<button type="button" data-desfazer="${esc(c.id)}" data-m="${i}" data-c="${j}">Desfazer</button>` : ''}</div></div>`;
+}
+function opcHtml(m, i){
+  if(m.opcFeito) return `<div class="ops"><div class="feito">✓ ${esc(m.opcFeito)}</div></div>`;
+  return '<div class="ops">' + m.opc.map((o, j) => `<button type="button" data-opc="${j}" data-m="${i}">${o.sub ? `<small>${esc(o.sub)}</small>` : ''}${esc(o.rotulo)}</button>`).join('') + '</div>';
 }
 function desenhar(){
   let html = '', diaAnt = '';
+  MAPA = SEC ? new Map(SEC.itens().map(x => [x.id, x])) : null;
   CHAT.forEach((m, i) => {
     const d = rotDia(m.em); if(d !== diaAnt){ html += `<div class="dia-sep"><span>${esc(d)}</span></div>`; diaAnt = d; }
     const anx = (m.anexos || []).length ? `<div class="anx-msg">${m.anexos.map(a => `<button type="button" data-ver="${esc(a.id)}" data-img="${a.thumb ? 1 : ''}">${a.thumb ? `<img src="${a.thumb}" alt="">` : `<span>📎 ${esc(a.nome)}</span>`}</button>`).join('')}</div>` : '';
-    html += `<div class="msg ${m.de}" data-i="${i}"><div class="bal">${anx}${m.audio ? '<span class="audio">Áudio transcrito</span>' : ''}${esc(m.texto)}${(m.cards || []).map(cardHtml).join('')}${m.op ? opsHtml(m, i) : ''}<span class="hora">${horaDe(m.em)}</span></div></div>`;
+    html += `<div class="msg ${m.de}" data-i="${i}"><div class="bal">${anx}${m.audio ? '<span class="audio">Áudio transcrito</span>' : ''}${esc(m.texto)}${(m.cards || []).map((c, j) => cardHtml(c, i, j)).join('')}${m.opc && m.opc.length ? opcHtml(m, i) : ''}${m.op ? opsHtml(m, i) : ''}<span class="hora">${horaDe(m.em)}</span></div></div>`;
   });
   $('conversa').innerHTML = html;
   $('conversa').scrollTop = $('conversa').scrollHeight;
@@ -289,7 +298,7 @@ function falar(de, texto, extra){ CHAT.push(Object.assign({ de, texto, em:Date.n
 function boasVindas(){
   if(CHAT.length){ desenhar(); return; }
   const n = primeiroNome();
-  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Me mande por mensagem ou áudio o que precisa e eu coloco na sua agenda.\n\nEx.: “dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”.\n\nVocê também pode perguntar: “o que tenho hoje?”, “o que está atrasado?” ou “buscar orçamento”.`);
+  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Pode falar comigo por mensagem ou áudio, como no WhatsApp.\n\n· “dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”\n· “adia a reunião das 14h para as 16h”\n· “desmarca o alinhamento de sexta”\n· “o que tenho hoje?”`);
 }
 
 /* ---------- anexos: foto, print, PDF, Word, Excel ---------- */
@@ -419,10 +428,18 @@ function pergunta(t){
   return null;
 }
 
+let FILA = [];
 function receber(texto, audio){
   texto = String(texto || '').trim(); if(!texto) return;
   falar('eu', texto, audio ? { audio:true } : null);
-  if(!SEC){ setTimeout(() => falar('ela', 'Ainda estou abrindo sua agenda. Tente de novo em instantes.'), 300); return; }
+  if(!SEC){ FILA.push({ texto }); if(FILA.length === 1) falar('ela', 'Só um instante, estou abrindo sua agenda…'); return; }
+  responder(texto);
+}
+function mostrarResposta(r){
+  falar('ela', r.texto, { cards: (r.cards || []).map(c => Object.assign({}, c)), opc: (r.opcoes || []).map(o => ({ rotulo:o.rotulo, sub:o.sub || '', acao:o.acao })) });
+}
+function responder(texto){
+  if(SEC.conversar){ try{ mostrarResposta(SEC.conversar(texto)); }catch(e){ falar('ela', 'Tive um problema para entender agora. Pode repetir de outro jeito?'); } return; }
   setTimeout(() => {
     const mb = norm(texto).match(/^(busca|buscar|busque|procura|procurar|procure|pesquisa|pesquisar|pesquise|acha|achar|ache|encontra|encontrar|encontre)\b[:\s]*(.*)$/);
     if(mb && SEC.buscar){
@@ -441,13 +458,24 @@ function receber(texto, audio){
     const semData = feitos.filter(i => !i.data).length;
     const t = (feitos.length === 1 ? 'Anotado na sua agenda.' : `Anotei ${feitos.length} itens na sua agenda.`) + (semData ? `\n${semData === 1 ? 'Ficou sem data' : semData + ' ficaram sem data'}: abra para ajustar se quiser.` : '');
     falar('ela', t, { cards: feitos.map(i => ({ id:i.id, titulo:i.titulo, tipo:i.tipo, data:i.data, hora:i.hora, pessoa:i.pessoa, podeDesfazer:true })) });
-  }, 350);
+  }, 60);
 }
 
 $('conversa').addEventListener('click', e => {
+  const o = e.target.closest('[data-opc]');
+  if(o && SEC && SEC.executar){
+    const m = CHAT[+o.dataset.m]; if(!m || !m.opc || m.opcFeito) return;
+    const op = m.opc[+o.dataset.opc]; m.opcFeito = op.rotulo; guardarChat();
+    mostrarResposta(SEC.executar(op.acao)); return;
+  }
   const d = e.target.closest('[data-desfazer]');
   if(d && SEC){
-    const id = d.dataset.desfazer; SEC.desfazer(id);
+    const id = d.dataset.desfazer, m = CHAT[+d.dataset.m], c = m && (m.cards || [])[+d.dataset.c];
+    if(c && SEC.desfazerCard && (c.antes || c.apagado)){
+      SEC.desfazerCard(c); c.podeDesfazer = false; c.apagado = false; c.desfeito = false;
+      guardarChat(); desenhar(); aviso('Desfeito. Voltou como estava.'); return;
+    }
+    SEC.desfazer(id);
     CHAT.forEach(m => (m.cards || []).forEach(c => { if(c.id === id){ c.desfeito = true; c.podeDesfazer = false; } }));
     guardarChat(); desenhar(); aviso('Desfeito.'); return;
   }
@@ -494,8 +522,9 @@ function gravar(){
   const r = new SR(); rec = r; r.lang = 'pt-BR'; r.interimResults = true; r.continuous = true;
   r.onresult = e => {
     if(encerrado || rec !== r) return;
-    parcial = '';
-    for(let i = e.resultIndex; i < e.results.length; i++){ const x = e.results[i]; if(x.isFinal) final += x[0].transcript + ' '; else parcial += x[0].transcript; }
+    let f = '', p = '';
+    for(let i = 0; i < e.results.length; i++){ const x = e.results[i], tr = String(x[0].transcript || '').trim(); if(!tr) continue; if(x.isFinal){ if(!f.trim().endsWith(tr)) f += tr + ' '; } else p += tr + ' '; }
+    final = f; parcial = p.trim();
     $('ouvido').textContent = (final + parcial).trim() || DICA_REC;
     clearTimeout(tSemVoz);
   };
