@@ -54,7 +54,7 @@
   }
 
   /* ---------- achar o item de que ela está falando ---------- */
-  const VAZIAS = new Set('a o as os um uma de da do das dos e em no na nos nas para pra pro pras com que minha meu minhas meus hoje amanha agora as dia hora horas h la ali isso essa esse esta este aquela aquele por favor reuniao reunioes compromisso tarefa item evento agenda marcada marcado tinha tenho tem era estava vai ser fica ficou agora secretaria call alinhamento ate depois antes mais menos tarde manha noite cedo semana proxima proximo vez sim nao pode poderia consegue quero queria gostaria preciso voce eu favor coisa aquilo'.split(' '));
+  const VAZIAS = new Set('a o as os um uma de da do das dos e em no na nos nas para pra pro pras com que minha meu minhas meus hoje amanha agora as dia hora horas h la ali isso essa esse esta este aquela aquele por favor reuniao reunioes compromisso tarefa item evento agenda marcada marcado tinha tenho tem era estava vai ser fica ficou agora secretaria ate depois antes mais menos tarde manha noite cedo semana proxima proximo vez sim nao pode poderia consegue quero queria gostaria preciso voce eu favor coisa aquilo horario horarios data marcacao agendamento sua seu aquela essa vou vamos'.split(' '));
   const RX_VERBOS_ACAO = /\b(adiar|adia|adie|remarcar|remarca|remarque|reagendar|reagenda|reagende|mudar|muda|mude|trocar|troca|troque|passar|passa|passe|transferir|transfere|transfira|antecipar|antecipa|antecipe|empurrar|empurra|empurre|jogar|joga|jogue|alterar|altera|altere|mover|move|mova|atrasar|atrasa|atrase|desmarcar|desmarca|desmarque|cancelar|cancela|cancele|apagar|apaga|apague|excluir|exclui|exclua|deletar|deleta|remover|remove|remova|tirar|tira|tire|conclui|concluir|concluido|concluida|terminei|finalizei|fiz|feito|feita|resolvi|marca|marcar|marque|como|baixa|dar|da|risca|riscar)\b/g;
   function tipoPedido(n){
     if(/\b(reuniao|reunioes|call|meet|1:1|1x1|daily|weekly)\b/.test(n)) return ['reuniao', 'alinhamento'];
@@ -77,7 +77,7 @@
     if(q.temData) cands = cands.filter(i => i.data === q.data);
     if(!q.temHora && !q.temData && !kws.length && !tipos) return { lista:[], q, kws };
     const pont = cands.map(it => {
-      const alvo = norm(it.titulo + ' ' + (it.pessoa || '') + ' ' + (it.notas || '').slice(0, 200));
+      const alvo = norm(it.titulo + ' ' + (it.pessoa || '') + ' ' + (it.tipo || '') + ' ' + (it.notas || '').slice(0, 200));
       let p = 0, acertos = 0;
       kws.forEach(w => { if(new RegExp('\\b' + w.slice(0, Math.max(4, w.length - 2))).test(alvo)){ p += 3; acertos++; } });
       if(tipos && tipos.includes(it.tipo)) p += tipos[0] === it.tipo ? 3 : 1;
@@ -154,7 +154,8 @@
     for(let k = 0; k < 4; k++){
       const antes = r;
       r = r.replace(/^(bom dia|boa tarde|boa noite|oi+e?|ola+|opa|hey|e ai|eai|salve|alo|ei)\b[\s,!.]*/, () => { achou = true; return ''; });
-      r = r.replace(/^(tudo bem|tudo bom|tudo certo|td bem|tudo joia|como vai|como voce esta|como esta|como vc ta|como voce ta|tudo tranquilo)\b[\s,!.?]*(com voce|contigo)?[\s,!.?]*/, () => { perguntouBem = true; achou = true; return ''; });
+      // "como está" só é cumprimento quando fala de você ("como está minha agenda" é pergunta)
+      r = r.replace(/^(tudo (bem|bom|certo|joia|tranquilo|ok)|td bem|tudo bem\s?(ai|por ai)|como vai( voce| vc)?|como (voce|vc) (esta|ta|vai)|como esta (voce|vc)|como estas|como esta$|como ta$|como vc ta$)\b[\s,!.?]*(com voce|contigo|por ai|ai)?[\s,!.?]*/, () => { perguntouBem = true; achou = true; return ''; });
       r = r.replace(/^(secretaria|minha secretaria|querida|amiga|flor|linda)\b[\s,!.]*/, '');
       r = r.replace(/^(kah|karine)\b[\s,!.]*/, '');
       if(r === antes) break;
@@ -164,7 +165,7 @@
 
   /* ---------- perguntas sobre a agenda ---------- */
   function ehPergunta(texto, n){
-    return /\?\s*$/.test(texto.trim()) || /^(o que|oque|que|qual|quais|quando|que horas|a que horas|me (diz|fala|mostra|passa|lembra)|mostra|mostre|lista|liste|tem algo|tenho algo|tenho alguma|tem alguma|tenho reuniao|tenho compromisso|como esta|como ta|e (hoje|amanha|a semana)|quantas?|quantos?)\b/.test(n) || /^(agenda|compromissos|pendencias|tarefas|reunioes)( de| da| do|$)/.test(n);
+    return /\?\s*$/.test(texto.trim()) || /^(o que|oque|que|qual|quais|quando|que horas|a que horas|me (diz|fala|mostra|passa)|me lembra (o que|que horas|quando|qual)|mostra|mostre|lista|liste|tem algo|tenho algo|tenho alguma|tem alguma|tenho reuniao|tenho compromisso|como esta|como ta|e (hoje|amanha|a semana)|quantas?|quantos?)\b/.test(n) || /^(agenda|compromissos|pendencias|tarefas|reunioes)( de| da| do|$)/.test(n);
   }
   function responderPergunta(texto, n){
     const hoje = hojeD(), its = abertos();
@@ -201,8 +202,26 @@
   const RX_MOVER = /\b(adiar|adia|adie|remarcar|remarca|remarque|reagendar|reagenda|reagende|mudar|muda|mude|trocar|troca|troque|passar|passa|passe|transferir|transfere|transfira|antecipar|antecipa|antecipe|empurrar|empurra|empurre|jogar|joga|jogue|alterar|altera|altere|mover|move|mova|atrasar|atrasa|atrase)\b/;
   const RX_DEST = /\b(para|pra|pro|pras|p\/)\s+(?=(?:as\s+|a\s+|o\s+|o dia\s+|dia\s+|daqui a\s+)?(?:\d|amanha|depois de amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia|proxim|semana que vem|mes que vem|fim d|outro dia|mais tarde))/;
   const RX_REL = /\b(\d+|uma|um|meia|duas|dois|tres)\s*(horas?|h|minutos?|min|dias?|semanas?)\b/;
+  // sem verbo de mudar: "a reunião com a Thaíla vai ser às 17", "reunião das 14 agora é às 16"
+  const RX_VIROU = /\b(vai ser|vai ficar|agora e|agora vai ser|agora fica|ficou para|ficou pra|ficou as|passou para|passou pra|mudou para|mudou pra|fica para|fica pra|sera)\s+(?:para\s+|pra\s+)?/;
+  const RX_REF_ITEM = /\b(reuniao|alinhamento|call|compromisso|visita|consulta|entrevista|dentista|medico|almoco|jantar|treinamento|evento|1:1|1x1|daily|weekly)\b/;
+  const RX_HORA = /\b\d{1,2}(?::\d{2}|h\d{0,2})\b/g;
+  function moverImplicito(n){
+    const v = RX_VIROU.exec(n);
+    if(v && (RX_REF_ITEM.test(n.slice(0, v.index)) || encontrar(n.slice(0, v.index)).lista.length)){
+      const destino = n.slice(v.index + v[0].length), q = quando(destino);
+      if(q.temData || q.temHora) return { origem: n.slice(0, v.index).trim(), destino, rel:null, antecipar:false };
+    }
+    // "coloca/passa a reunião das 14 para as 16": só quando já existe algo nesse primeiro horário
+    const m = /\b(?:das|da|de|do)\s+(\d{1,2}(?::\d{2}|h\d{0,2})?)\s+(?:para|pra|pro|p\/)\s+(?:as\s+|a\s+)?(\d{1,2}(?::\d{2}|h\d{0,2}))(?!\s*(?:pessoas|dias|minutos|itens))/.exec(n);
+    if(m){
+      const hOrig = quando('as ' + m[1]).hora;
+      if(hOrig && abertos().some(i => i.hora === hOrig)) return { origem: n.slice(0, m.index) + ' as ' + m[1], destino: 'as ' + m[2], rel:null, antecipar:false };
+    }
+    return null;
+  }
   function moverTexto(texto, n){
-    const mv = RX_MOVER.exec(n); if(!mv) return null;
+    const mv = RX_MOVER.exec(n); if(!mv) return moverImplicito(n);
     const depois = n.slice(mv.index + mv[0].length);
     let origem = n.slice(0, mv.index) + ' ' + depois, destino = '';
     const md = RX_DEST.exec(depois);
@@ -215,7 +234,14 @@
     }
     // "a reunião das 14 vai ser às 16"
     if(!destino){ const v = /\b(vai ser|vai ficar|ficou|fica|agora e|passou a ser|sera)\s+(?:para\s+)?(.+)$/.exec(depois); if(v){ destino = v[2]; origem = n.slice(0, mv.index) + ' ' + depois.slice(0, v.index); } }
-    const rel = RX_REL.exec(depois);
+    // "adiar reunião 14h 16h": o primeiro horário é o de agora, o último é o novo
+    if(!destino){
+      const hs = depois.match(RX_HORA) || [];
+      if(hs.length >= 2){ const ult = depois.lastIndexOf(hs[hs.length - 1]); destino = 'as ' + hs[hs.length - 1]; origem = n.slice(0, mv.index) + ' ' + depois.slice(0, ult); }
+    }
+    let rel = RX_REL.exec(depois);
+    // "das 14h" é horário, não "14 horas a mais"
+    if(rel && /\b(das|as|de|da|do|para|pra|pro)\s*$/.test(depois.slice(0, rel.index))) rel = null;
     if(!destino && rel) origem = origem.replace(rel[0], ' ');
     const antecipar = /\b(antecipar|antecipa|antecipe)\b/.test(mv[0]);
     return { origem: origem.replace(/\b(a|o)\s*$/, '').trim(), destino: destino.trim(), rel: !destino && rel ? rel : null, antecipar };
@@ -257,6 +283,8 @@
   const RX_APAGAR = /\b(desmarcar|desmarca|desmarque|cancelar|cancela|cancele|apagar|apaga|apague|excluir|exclui|exclua|deletar|deleta|delete|remover|remove|remova|tirar|tira|tire)\b/;
   const RX_FEITO = /\b(conclui|concluir|concluido|concluida|terminei|finalizei|ja fiz|fiz o|fiz a|fiz os|fiz as|resolvi|marca como (feito|feita|concluido|concluida)|marcar como (feito|feita|concluido|concluida)|marque como (feito|feita|concluido|concluida)|dar baixa|da baixa|de baixa|risca|riscar|ja foi feito|ja foi feita|esta feito|esta feita|ta feito|ta feita)\b/;
   const RX_PEDIDO = /\b(anota|anote|anotar|marca|marque|marcar|agenda|agende|agendar|coloca|coloque|colocar|lembra|lembre|lembrar|lembrete|inclui|inclua|incluir|registra|registre|registrar|adiciona|adicione|adicionar|poe|ponha|cria|crie|criar|salva|salve|bota|bote|preciso|precisa|tenho que|tenho de|temos que|devo|nao esquecer|nao posso esquecer|vou ter|vai ter|teremos|tenho uma|tenho um|vem aqui|vai vir|vem visitar|reuniao|alinhamento|call|compromisso|tarefa|prazo|entregar|visita|consulta|entrevista|treinamento|evento|almoco|jantar)\b/;
+  // pedido explícito de anotar
+  const RX_ANOTAR = /\b(anota|anote|anotar|marca|marque|marcar|agenda|agende|agendar|coloca|coloque|colocar|lembra|lembre|lembrar|lembrete|inclui|inclua|incluir|registra|registre|registrar|adiciona|adicione|adicionar|poe|ponha|cria|crie|criar|salva|salve|bota|bote)\b/;
   let ESPERA = null;   // o que a secretária perguntou e está esperando resposta
 
   function opcoesItens(l, acaoDe, rotulo){
@@ -271,11 +299,12 @@
     /* respondendo uma pergunta da secretária */
     if(ESPERA){
       const esp = ESPERA; ESPERA = null;
-      if(/^(sim|s|isso|isso mesmo|pode|pode sim|claro|ok|okay|confirmo|confirma|manda|vai|uhum|aham|exato|positivo|beleza|blz|pode ser|por favor)\b/.test(n) && esp.sim) return executar(esp.sim);
-      if(/^(nao|n|nada|deixa|deixa pra la|esquece|cancela|negativo|melhor nao|nao precisa)\b/.test(n)) return R(pick(['Tudo bem, não mexi em nada.', 'Combinado, deixei como estava.']));
+      const curto = n.split(' ').length <= 4;   // "cancela a reunião das 14" é um pedido novo, não um "não"
+      if(curto && /^(sim|s|isso|isso mesmo|pode|pode sim|claro|ok|okay|confirmo|confirma|manda|vai|uhum|aham|exato|positivo|beleza|blz|pode ser|por favor|quero|anota|pode anotar)\b/.test(n) && esp.sim) return executar(esp.sim);
+      if(curto && /^(nao|n|nada|deixa|deixa pra la|esquece|cancela|negativo|melhor nao|nao precisa|era so conversa)\b/.test(n)) return R(pick(['Tudo bem, não mexi em nada.', 'Combinado, deixei como estava.']));
       if(esp.tipo === 'destino'){
         const it = DB.itens.find(i => i.id === esp.id), q = quando(n);
-        if(it && (q.temData || q.temHora) && palavras(n).length <= 1) return moverItem(it, n, null, false);
+        if(it && (q.temData || q.temHora) && palavras(n).length <= 1 && !RX_MOVER.test(n) && !RX_APAGAR.test(n)) return moverItem(it, n, null, false);
       }
       // falou outra coisa: segue a conversa normalmente
     }
@@ -302,6 +331,30 @@
     if(/^(tchau|ate mais|ate amanha|ate logo|ate depois|fui|bjs|beijos|beijo|boa noite e ate)\b/.test(n)) return R(`Até mais${NOME ? ', ' + NOME : ''}! Estou por aqui quando precisar.`);
     if(/^(quem e voce|quem e vc|o que voce faz|o que vc faz|o que voce sabe fazer|ajuda|help|me ajuda como|como funciona|como te uso|o que posso pedir)\b/.test(n)) return R('Sou sua secretária. ' + AJUDA);
     if(/^(bom trabalho|parabens|voce e otima|vc e otima|adoro voce|te amo|linda|arrasou)\b/.test(n)) return R('Obrigada! Fico feliz em ajudar.');
+
+    /* avisos do dia a dia: "vou almoçar", "estou indo para a reunião" */
+    if(/^(eu\s+)?(estou|to|tou|vou|ja vou)\s+(indo|saindo|chegando|voltando|entrando|almocar|sair|embora|dormir|descansar|pra casa|para casa|tomar|pegar|buscar um cafe|fazer uma pausa|dar uma pausa)\b/.test(n) && !quando(n).temHora && !RX_ANOTAR.test(n)){
+      const fala = /almoc/.test(n) ? 'Bom almoço' : /dormir|descansar|casa|embora/.test(n) ? 'Descanse bem' : /reuniao|alinhamento|call/.test(n) ? 'Boa reunião' : /cafe|pausa/.test(n) ? 'Aproveita a pausa' : 'Combinado';
+      return comPrefixo(R(`${fala}${NOME ? ', ' + NOME : ''}! Estou por aqui quando precisar.`));
+    }
+
+    /* conversa solta: agradecimento, pedido de ajuda, desabafo (nada disso vira item) */
+    const temPedidoForte = RX_MOVER.test(n) || RX_APAGAR.test(n) || RX_ANOTAR.test(n) || quando(n).temHora;
+    if(!temPedidoForte && /\b(obrigad[ao]|brigad[ao]|valeu|agradec\w*|grat[ao])\b/.test(n)) return comPrefixo(R(pick(['De nada! Qualquer coisa, é só chamar.', 'Imagina! Estou por aqui.', 'Por nada! Conte comigo.'])));
+    const nAjuda = n.replace(/^(eu\s+)?(quero|queria|gostaria)\s+(que\s+(voce|vc)\s+)?/, '');
+    if(!temPedidoForte && /^(preciso de (ajuda|voce|vc|uma ajuda)|me ajuda|me ajude|socorro|ajuda aqui|me organiza|organiza meu dia|organizar meu dia|vamos organizar|planejar meu dia|planeja meu dia)\b/.test(nAjuda)){
+      const s = resumoHoje();
+      return comPrefixo(R(`Claro${NOME ? ', ' + NOME : ''}, estou aqui. ${s.t} Me diz o que você precisa: posso anotar, adiar, desmarcar ou te lembrar de algo.`,
+        { opcoes:[s.l.length ? { rotulo:'Ver o que tenho hoje', acao:{ tipo:'falar', texto:'o que tenho hoje?' } } : null, { rotulo:'Ver a semana', acao:{ tipo:'falar', texto:'o que tenho na semana?' } }, s.atr.length ? { rotulo:'Ver atrasados', acao:{ tipo:'falar', texto:'o que está atrasado?' } } : null].filter(Boolean) }));
+    }
+    const RX_SENT = /\b(cansad\w*|cansativ\w*|exaust\w*|estressad\w*|estresse|sobrecarregad\w*|esgotad\w*|corrid[oa]|puxad[oa]|atolad\w*|correria|loucura|caotic\w*|pesad[oa]|dificil|complicad[oa]|triste|chatead\w*|preocupad\w*|ansios\w*|nervos\w*|feliz|animad\w*|contente|aliviad\w*|orgulhos\w*|dia bom|otimo dia|dia otimo|dia lindo|dia maravilhoso)\b/;
+    if(!temPedidoForte && RX_SENT.test(n) && !/\b(tenho que|preciso|devo|lembra|lembre)\b/.test(n)){
+      if(/feliz|animad|contente|aliviad|orgulhos|dia bom|otimo dia|dia otimo|dia lindo|dia maravilhoso/.test(n)) return comPrefixo(R(`Que bom${NOME ? ', ' + NOME : ''}! Fico feliz em saber. Se precisar de algo na agenda, é só falar.`));
+      if(/preocupad|ansios|nervos|triste|chatead/.test(n)) return comPrefixo(R(`Sinto muito${NOME ? ', ' + NOME : ''}. Quer me contar o que está pesando? Se tiver algo para resolver, eu anoto ou reorganizo a agenda para você.`));
+      const s = resumoHoje();
+      return comPrefixo(R(`Imagino${NOME ? ', ' + NOME : ''}, o dia está puxado. ${s.l.length ? s.t + ' Quer que eu veja o que dá para adiar?' : 'Pelo menos a agenda de hoje está tranquila. Respira um pouco!'}`,
+        { opcoes: s.l.length ? [{ rotulo:'Ver o que tenho hoje', acao:{ tipo:'falar', texto:'o que tenho hoje?' } }] : [] }));
+    }
 
     /* adiar / remarcar */
     const mv = moverTexto(texto, n);
@@ -364,11 +417,16 @@
       return comPrefixo(R(`Entendi${NOME ? ', ' + NOME : ''}. Quer que eu anote algo sobre isso na agenda?`, { opcoes:[{ rotulo:'Sim, anotar', sub:'“' + texto.slice(0, 80) + '”', acao:{ tipo:'criar', texto } }, { rotulo:'Não, era só conversa', acao:{ tipo:'nada' } }] }));
     }
 
-    /* anotar: só quando é um pedido de verdade */
+    /* anotar: direto só quando você pede ("anota", "marca", "me lembra"…) ou quando tem dia/horário.
+       Sem isso, ela pergunta antes. */
     const q = quando(n);
-    const pedido = RX_PEDIDO.test(n) || RX_VERBO.test(n) || q.temHora || (q.temData && !/^(hoje|hj|agora)$/.test(n)) || /^(pode|poderia|consegue|voce pode|vc pode)\b/.test(n);
-    if(!pedido){
-      const r = R(`Não sei se entendi${NOME ? ', ' + NOME : ''}. Quer que eu anote isso na agenda?`, { opcoes:[{ rotulo:'Sim, anotar', sub:'“' + texto.slice(0, 80) + '”', acao:{ tipo:'criar', texto } }, { rotulo:'Não, era só conversa', acao:{ tipo:'nada' } }] });
+    const direto = RX_ANOTAR.test(n) || q.temHora || (q.temData && !/^(hoje|hj|agora|amanha)$/.test(n) && (RX_PEDIDO.test(n) || RX_VERBO.test(n)));
+    if(!direto){
+      const parece = RX_PEDIDO.test(n) || RX_VERBO.test(n) || q.temData;
+      const frase = texto.trim().replace(/[.!]+$/, '').slice(0, 90);
+      const r = parece
+        ? R(`Quer que eu anote “${frase}” na sua agenda${NOME ? ', ' + NOME : ''}? Se quiser, me diga também o dia.`, { opcoes:[{ rotulo:'Sim, anotar', acao:{ tipo:'criar', texto } }, { rotulo:'Não, era só conversa', acao:{ tipo:'nada' } }] })
+        : R(`Entendi${NOME ? ', ' + NOME : ''}. Quer que eu faça algo com isso na agenda, ou era só para conversar?`, { opcoes:[{ rotulo:'Anotar na agenda', acao:{ tipo:'criar', texto } }, { rotulo:'Era só conversa', acao:{ tipo:'nada' } }] });
       ESPERA = { sim:{ tipo:'criar', texto } };
       return comPrefixo(r);
     }
@@ -389,7 +447,7 @@
     let feitos = [];
     texto = soPedido(texto) || texto;
     try{ feitos = S.anotar(texto); }catch(_){ feitos = []; }
-    feitos.forEach(f => { const it = DB.itens.find(i => i.id === f.id); if(!it) return; const t = it.titulo.replace(/^(uma|um|o|a)\s+(?=\S)/i, ''); if(t !== it.titulo && t.length > 2){ it.titulo = t.charAt(0).toUpperCase() + t.slice(1); f.titulo = it.titulo; } });
+    feitos.forEach(f => { const it = DB.itens.find(i => i.id === f.id); if(!it) return; const t = it.titulo.replace(/^a[ií]\s*[:,-]\s*/i, '').replace(/^(uma|um|o|a)\s+(?=\S)/i, ''); if(t !== it.titulo && t.length > 2){ it.titulo = t.charAt(0).toUpperCase() + t.slice(1); f.titulo = it.titulo; } });
     if(feitos.length){ salvar(); render(); }
     if(!feitos.length) return R('Não consegui entender o que anotar. Me diga o que é, o dia e o horário. Ex.: “sexta às 10h alinhamento com o fornecedor”.');
     const avisos = feitos.map(f => { const it = DB.itens.find(i => i.id === f.id); const c = it && conflito(it, it.data, it.hora); return c ? `Atenção: ${quandoTxt(it.data, it.hora)} você também tem “${c.titulo}”.` : ''; }).filter(Boolean);
@@ -426,5 +484,9 @@
     return S.desfazer(c.id);
   }
 
-  Object.assign(S, { conversar, executar, desfazerCard, falaParaTexto, alterar, restaurar });
+  // quando ela faz uma pergunta ("para quando eu passo?"), guarda para entender a resposta seguinte
+  const guardarEspera = r => { if(r && r.esperar) ESPERA = r.esperar; return r; };
+  const conversarExp = t => guardarEspera(conversar(t));
+  const executarExp = a => guardarEspera(executar(a));
+  Object.assign(S, { conversar: conversarExp, executar: executarExp, desfazerCard, falaParaTexto, alterar, restaurar });
 })();
