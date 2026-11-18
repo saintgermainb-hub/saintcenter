@@ -1441,6 +1441,87 @@
   // a Secretária do celular também busca
   if(window.SG_secretaria) window.SG_secretaria.buscar = q => buscar(q).map(r => ({ fonte:r.fonte, id: r.fonte === 'item' ? r.it.id : r.e.id, titulo: r.fonte === 'item' ? r.it.titulo : 'Caixa de entrada', onde: r.trecho.rot, trecho: r.trecho.txt }));
 
+  /* ---------- Avisos da Secretária: atrasados, vencendo em 3h, reunião em 1h ---------- */
+  const AV_TAREFA = { tarefa:1, plano:1, projeto:1 }, AV_EVENTO = { reuniao:1, alinhamento:1, compromisso:1 };
+  const minDe = h => { const [a, b] = String(h || '').split(':').map(Number); return a * 60 + (b || 0); };
+  function avisosAgora(){
+    const d = new Date(), dia = iso(d), m = d.getHours() * 60 + d.getMinutes();
+    const atrasadas = [], vencem = [], eventos = [];
+    DB.itens.forEach(i => {
+      if(!i || i.feito || !i.data) return;
+      if(AV_TAREFA[i.tipo]){
+        if(i.data < dia || (i.data === dia && i.hora && m > minDe(i.hora))) atrasadas.push(i);
+        else if(i.data === dia && i.hora){ const f = minDe(i.hora) - m; if(f > 0 && f <= 180) vencem.push(i); }
+      } else if(AV_EVENTO[i.tipo] && i.data === dia && i.hora){ const f = minDe(i.hora) - m; if(f > 0 && f <= 60) eventos.push(Object.assign({ falta:f }, i)); }
+    });
+    const dir = (a, b) => (b.prioridade === 'diretoria') - (a.prioridade === 'diretoria');
+    return { atrasadas: atrasadas.sort(dir), vencem: vencem.sort(dir), eventos, dia, m };
+  }
+  const apelido = () => { const n = String(EU && EU.nome || '').trim().split(/\s+/)[0] || ''; return /^karine$/i.test(n) ? 'Kah' : (n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : ''); };
+  function avisoTexto(L){
+    const curto = t => { t = String(t || '').trim(); return t.length > 48 ? t.slice(0, 46) + '…' : t; };
+    const lista = (arr, fn) => { const n = arr.slice(0, 3).map(fn); if(arr.length > 3) n.push('mais ' + (arr.length - 3)); return n.length > 1 ? n.slice(0, -1).join(', ') + ' e ' + n[n.length - 1] : n[0]; };
+    const p = [];
+    if(L.atrasadas.length) p.push('você tem ' + (L.atrasadas.length === 1 ? '1 item atrasado: ' : L.atrasadas.length + ' itens atrasados: ') + lista(L.atrasadas, i => curto(i.titulo)) + '.');
+    if(L.vencem.length) p.push((L.vencem.length === 1 ? 'Vence em até 3h: ' : 'Vencem em até 3h: ') + lista(L.vencem, i => curto(i.titulo) + ' (' + i.hora + ')') + '.');
+    L.eventos.forEach(i => p.push(curto(i.titulo) + ' começa às ' + i.hora + ', daqui a ' + (i.falta >= 55 ? '1h' : i.falta + ' min') + '.'));
+    if(!p.length) return '';
+    const t = p.join(' '), n = apelido();
+    return n ? n + ', ' + t.replace(/^Vence/, 'vence') : t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  // o que ainda não foi avisado hoje (para não repetir)
+  function avisosNovos(L){
+    const k = CHAVE + ':avisados'; let f = {}; try{ f = JSON.parse(localStorage.getItem(k) || '{}'); }catch(_){}
+    Object.keys(f).forEach(x => { if(f[x] !== L.dia) delete f[x]; });
+    let novo = false;
+    L.atrasadas.forEach(i => { if(!f['a:' + i.id]){ f['a:' + i.id] = L.dia; novo = true; } });
+    L.vencem.forEach(i => { if(!f['v:' + i.id]){ f['v:' + i.id] = L.dia; novo = true; } });
+    L.eventos.forEach(i => { if(!f['e:' + i.id]){ f['e:' + i.id] = L.dia; novo = true; } });
+    try{ localStorage.setItem(k, JSON.stringify(f)); }catch(_){}
+    return novo;
+  }
+  window.SG_secretaria && (window.SG_secretaria.avisos = () => { const L = avisosAgora(); return { texto: avisoTexto(L), atrasadas: L.atrasadas.map(i => i.id), vencem: L.vencem.map(i => i.id), eventos: L.eventos.map(i => i.id) }; });
+
+  const APP = /[?&]app=1/.test(location.search);
+  if(!APP){
+    const cssAv = document.createElement('style');
+    cssAv.textContent = `
+      .aviso-sec{position:fixed;top:18px;right:18px;z-index:60;width:min(380px,calc(100vw - 28px));background:#fff;border:1px solid #f2d3e6;border-radius:20px;box-shadow:0 30px 70px -24px rgba(255,62,165,.55);padding:16px 16px 14px;display:grid;gap:10px;animation:avIn .35s ease-out}
+      @keyframes avIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+      .aviso-sec .cab{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--g2)}
+      .aviso-sec .cab .laco{width:26px;height:20px}
+      .aviso-sec .cab button{margin-left:auto;font-size:20px;color:var(--g2);padding:0 4px}
+      .aviso-sec p{margin:0;font-size:14px;line-height:1.5}
+      .aviso-sec .bts{display:flex;gap:8px;justify-content:flex-end}
+      .sino{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:9px 14px;background:#fff;color:var(--g1)}
+      .sino svg{width:15px;height:15px;color:var(--pink)}
+    `;
+    document.head.appendChild(cssAv);
+    const btnNovo = $('btnNovo');
+    if(btnNovo && 'Notification' in window && Notification.permission !== 'granted'){
+      btnNovo.insertAdjacentHTML('beforebegin', '<button type="button" class="sino" id="avSino" title="Receber avisos neste computador"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>Ativar avisos</button>');
+      $('avSino').onclick = async () => { try{ const r = await Notification.requestPermission(); if(r === 'granted'){ $('avSino').remove(); toast('Avisos ligados neste computador.'); verificarAvisos(true); } else toast('O navegador não liberou os avisos.'); }catch(_){} };
+    }
+    function mostrarAviso(texto){
+      document.querySelectorAll('.aviso-sec').forEach(x => x.remove());
+      document.body.insertAdjacentHTML('beforeend', `<div class="aviso-sec" role="alert"><div class="cab">${LACO}Secretária<button type="button" aria-label="Fechar">×</button></div><p>${esc(texto)}</p><div class="bts"><button class="btn ghost min" data-av="ver">Ver tarefas</button><button class="btn min" data-av="ok">Ok</button></div></div>`);
+      const el = document.querySelector('.aviso-sec');
+      el.addEventListener('click', e => {
+        if(e.target.closest('[data-av="ver"]')){ const ab = document.querySelector('nav.abas [data-aba="lista"]'); if(ab) ab.click(); el.remove(); }
+        else if(e.target.closest('button')) el.remove();
+      });
+      try{ if('Notification' in window && Notification.permission === 'granted' && document.visibilityState !== 'visible'){ const n = new Notification('Secretária', { body: texto, icon: '../secretaria/icone-192.png', tag: 'secretaria' }); n.onclick = () => { window.focus(); n.close(); }; } }catch(_){}
+    }
+    function verificarAvisos(forcar){
+      const h = new Date().getHours(); if(h >= 22 || h < 7) return;
+      const L = avisosAgora();
+      if(!avisosNovos(L) && !forcar) return;
+      const t = avisoTexto(L); if(t) mostrarAviso(t);
+    }
+    setTimeout(() => verificarAvisos(false), 2500);
+    setInterval(() => verificarAvisos(false), 60000);
+  }
+
   /* ---------- dentro do aplicativo do celular ---------- */
   if(/[?&]app=1/.test(location.search)){
     document.documentElement.classList.add('modo-app');
