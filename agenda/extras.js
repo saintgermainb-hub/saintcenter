@@ -411,10 +411,10 @@
     const el = e.target.closest('.item[data-id]');
     if(!el) return;
     const it = DB.itens.find(i => i.id === el.dataset.id);
-    if(!ehReuniao(it)) return;
+    if(!it) return;
     e.stopPropagation(); e.preventDefault();
     if($('dlgDia').open) $('dlgDia').close();
-    abrirReuniao(it);
+    if(ehReuniao(it)) abrirReuniao(it); else verItem(it);   // tarefa abre para ler; editar só se quiser
   }, true);
 
   // botão "+ Reunião" no topo
@@ -1226,7 +1226,7 @@
     anotar: t => secretariaCore(String(t || '').trim()).map(it => Object.assign({}, it)),
     desfazer: id => { const n = DB.itens.length; DB.itens = DB.itens.filter(i => i.id !== id); if(DB.itens.length !== n){ salvar(); render(); return true; } return false; },
     itens: () => DB.itens.slice(), status: it => status(it), ehReuniao: it => ehReuniao(it), tipoCurto: k => TIPO_CURTO[k] || k, fmtData: (d, c) => fmtData(d, c),
-    abrir: id => { const it = DB.itens.find(i => i.id === id); if(!it) return false; if(ehReuniao(it)) abrirReuniao(it); else abrirItem(it); return true; }
+    abrir: id => { const it = DB.itens.find(i => i.id === id); if(!it) return false; if(ehReuniao(it)) abrirReuniao(it); else verItem(it); return true; }
   };
   function executarSecretaria(){
     const t = $('secTxt').value.trim(); if(!t) return;
@@ -1246,7 +1246,7 @@
     const d = e.target.closest('[data-sec-desfazer]');
     if(d){ DB.itens = DB.itens.filter(i => i.id !== d.dataset.secDesfazer); salvar(); render(); d.closest('.r').remove(); toast('Desfeito.'); return; }
     const a = e.target.closest('[data-sec-abrir]');
-    if(a){ const it = DB.itens.find(i => i.id === a.dataset.secAbrir); if(!it){ toast('Esse item não está mais na agenda.'); return; } if(ehReuniao(it)) abrirReuniao(it); else abrirItem(it); }
+    if(a){ const it = DB.itens.find(i => i.id === a.dataset.secAbrir); if(!it){ toast('Esse item não está mais na agenda.'); return; } if(ehReuniao(it)) abrirReuniao(it); else verItem(it); }
   });
 
   /* ---------- Realizada = tem anotações; depois disso data e horário ficam travados ---------- */
@@ -1315,12 +1315,13 @@
     dialog{position:relative}
     .dlg-x{position:sticky;top:12px;float:right;margin:12px 14px -50px 0;z-index:6;width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid #f2d3e6;color:var(--g2);font-size:22px;line-height:1;display:grid;place-items:center;box-shadow:0 6px 16px -10px rgba(255,62,165,.6)}
     .dlg-x:hover{border-color:var(--pink);color:var(--fg)}
+    .dlg-x:focus{outline:none}
   `;
   document.head.appendChild(cssX);
   function poeX(dlg){
     if(!dlg || dlg.querySelector(':scope > .dlg-x')) return;
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'dlg-x'; b.title = 'Fechar'; b.setAttribute('aria-label', 'Fechar'); b.textContent = '×';
+    b.type = 'button'; b.className = 'dlg-x'; b.title = 'Fechar'; b.autofocus = true; b.setAttribute('aria-label', 'Fechar'); b.textContent = '×';
     b.onclick = () => { if(dlg.id === 'dlgReuniao' && $('rqFechar')) $('rqFechar').click(); else { dlg.close(); try{ render(); }catch(_){} } };
     dlg.prepend(b);
   }
@@ -1425,7 +1426,7 @@
         if(r.trecho.campo === 'anotacoes'){ const ta = $('rqNotas'), k = ta.value.indexOf(r.trecho.txt); if(k >= 0){ ta.focus(); ta.setSelectionRange(k, k + r.trecho.txt.length); const linhas = ta.value.slice(0, k).split('\n').length; ta.scrollTop = Math.max(0, (linhas - 3) * 22); ta.scrollIntoView({ block:'nearest' }); } }
         else if(r.trecho.rot === 'Pauta'){ const alvo = [...document.querySelectorAll('#dlgReuniao input, #dlgReuniao textarea')].find(x => x.value === r.trecho.txt); if(alvo){ alvo.scrollIntoView({ block:'center' }); alvo.style.boxShadow = '0 0 0 3px #ffe3f3'; setTimeout(() => alvo.style.boxShadow = '', 2500); } }
       }, 120);
-    } else abrirItem(it);
+    } else verItem(it);
   }
   let tBusca = null;
   $('buscaTxt').addEventListener('input', () => { clearTimeout(tBusca); tBusca = setTimeout(desenharBusca, 160); });
@@ -1521,6 +1522,69 @@
     setTimeout(() => verificarAvisos(false), 2500);
     setInterval(() => verificarAvisos(false), 60000);
   }
+
+  /* ---------- Ver item: abre para ler; "Editar" só quando precisar ---------- */
+  const cssVer = document.createElement('style');
+  cssVer.textContent = `
+    #dlgVer .dlg{gap:16px}
+    #dlgVer .ver-top{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-right:44px}
+    #dlgVer h3{font-weight:400;font-size:22px;line-height:1.3;margin:0;padding-right:44px;letter-spacing:.01em}
+    #dlgVer .ver-meta{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px;line-height:1.45}
+    #dlgVer .ver-meta dt{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--g2);padding-top:3px}
+    #dlgVer .ver-meta dd{margin:0}
+    #dlgVer .ver-meta dd.at{color:var(--neon)} #dlgVer .ver-meta dd.hj{color:var(--pink)}
+    #dlgVer .ver-notas{white-space:pre-wrap;font-size:14px;line-height:1.6;background:var(--rosa-bg);border:1px solid #f7d3e9;border-radius:14px;padding:12px 14px}
+    #dlgVer .ver-sub{display:grid;gap:6px}
+    #dlgVer .ver-sub label{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;cursor:pointer}
+    #dlgVer .ver-sub input{width:18px;height:18px;margin-top:1px;accent-color:var(--pink);flex:none}
+    #dlgVer .ver-sub .ok{color:var(--g3);text-decoration:line-through}
+    #dlgVer .k2{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--g2)}
+    #dlgVer .ver-acoes{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+  `;
+  document.head.appendChild(cssVer);
+  document.body.insertAdjacentHTML('beforeend', '<dialog id="dlgVer"><div class="dlg" id="verCorpo"></div></dialog>');
+  let VER = null;
+  function verItem(it){
+    VER = it; const st = status(it);
+    const quando = it.data ? fmtData(it.data, true) + (it.hora ? ' · ' + it.hora : '') : 'Sem data';
+    const stTxt = it.feito ? 'Concluído' : st === 'atrasada' ? 'Atrasado' : st === 'hoje' ? 'Hoje' : st === 'passou' ? 'Já passou' : '';
+    const prio = { diretoria:'Solicitação da diretoria', alta:'Alta', media:'Média', baixa:'Baixa' }[it.prioridade] || '';
+    const pai = it.paiId && DB.itens.find(i => i.id === it.paiId);
+    const reu = it.origem && DB.itens.find(i => i.id === it.origem);
+    const sub = it.sub || [];
+    $('verCorpo').innerHTML = `
+      <div class="ver-top"><span class="tipo ${esc(it.tipo)}">${esc(TIPO_CURTO[it.tipo] || it.tipo)}</span>${it.prioridade === 'diretoria' ? '<span class="tag-dir">Diretoria</span>' : ''}</div>
+      <h3>${esc(it.titulo)}</h3>
+      <dl class="ver-meta">
+        <dt>Quando</dt><dd>${esc(quando)}</dd>
+        ${stTxt ? `<dt>Situação</dt><dd class="${st === 'atrasada' && !it.feito ? 'at' : st === 'hoje' && !it.feito ? 'hj' : ''}">${esc(stTxt)}</dd>` : ''}
+        ${it.pessoa ? `<dt>Pessoa</dt><dd>${esc(it.pessoa)}</dd>` : ''}
+        ${prio && it.prioridade !== 'diretoria' ? `<dt>Prioridade</dt><dd>${esc(prio)}</dd>` : ''}
+        ${pai ? `<dt>Objetivo</dt><dd>${esc(pai.titulo)}</dd>` : ''}
+        ${reu ? `<dt>Reunião</dt><dd><button type="button" class="btn ghost min" data-ver-reu="${esc(reu.id)}">${esc(reu.titulo)}</button></dd>` : ''}
+      </dl>
+      ${it.notas ? `<div><div class="k2" style="margin-bottom:6px">Notas</div><div class="ver-notas">${esc(it.notas)}</div></div>` : ''}
+      ${sub.length ? `<div><div class="k2" style="margin-bottom:8px">Etapas · ${sub.filter(x => x.ok).length} de ${sub.length}</div><div class="ver-sub">${sub.map((x, i) => `<label><input type="checkbox" data-ver-sub="${i}" ${x.ok ? 'checked' : ''}><span class="${x.ok ? 'ok' : ''}">${esc(x.t)}</span></label>`).join('')}</div></div>` : ''}
+      <div class="ver-acoes"><button type="button" class="btn ghost" data-ver="editar">Editar</button><button type="button" class="btn" data-ver="feito">${it.feito ? 'Reabrir' : 'Concluir'}</button></div>`;
+    poeX($('dlgVer'));
+    if(!$('dlgVer').open) $('dlgVer').showModal();
+    try{ $('dlgVer').querySelector('.dlg-x').focus({ preventScroll:true }); }catch(_){}
+    $('dlgVer').scrollTop = 0;
+  }
+  $('dlgVer').addEventListener('click', e => {
+    if(!VER) return;
+    const b = e.target.closest('[data-ver]');
+    if(b && b.dataset.ver === 'editar'){ const it = VER; $('dlgVer').close(); abrirItem(it); return; }
+    if(b && b.dataset.ver === 'feito'){ concluir(VER); $('dlgVer').close(); render(); return; }
+    const r = e.target.closest('[data-ver-reu]');
+    if(r){ const it = DB.itens.find(i => i.id === r.dataset.verReu); $('dlgVer').close(); if(it) abrirReuniao(it); }
+  });
+  $('dlgVer').addEventListener('change', e => {
+    const c = e.target.closest('[data-ver-sub]'); if(!c || !VER) return;
+    const x = (VER.sub || [])[+c.dataset.verSub]; if(!x) return;
+    x.ok = c.checked; salvar(); render(); verItem(VER);
+  });
+  window.SG_verItem = id => { const it = DB.itens.find(i => i.id === id); if(it){ if(ehReuniao(it)) abrirReuniao(it); else verItem(it); } };
 
   /* ---------- dentro do aplicativo do celular ---------- */
   if(/[?&]app=1/.test(location.search)){

@@ -813,7 +813,7 @@ function abrirItem(it, padrao){
   $('iConcluir').textContent = it && it.feito ? 'Reabrir' : 'Concluir';
   atualizarGoogle();
   $('dlgItem').showModal();
-  setTimeout(()=>$('iTitulo').focus(), 30);
+  if(!it) setTimeout(()=>$('iTitulo').focus(), 30); // item existente abre sem subir o teclado
 }
 let SUB = [];
 function desenharSub(){
