@@ -601,6 +601,21 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 
 /* ---------- início ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+// versão nova publicada: limpa a cópia guardada no celular e abre a nova
+const VERSAO = '2026-11-18-2';
+async function checarVersao(){
+  try{
+    const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
+    if(!j.v || j.v === VERSAO) return;
+    const k = 'sg-secretaria-atualizou:' + j.v; if(sessionStorage.getItem(k) || txt.value.trim() || gravando) return;
+    sessionStorage.setItem(k, '1');
+    try{ const reg = await navigator.serviceWorker.getRegistration(); if(reg) await reg.update(); }catch(_){}
+    try{ const ks = await caches.keys(); await Promise.all(ks.map(x => caches.delete(x))); }catch(_){}
+    location.reload();
+  }catch(_){}
+}
+checarVersao();
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checarVersao(); });
 if(localStorage.getItem(K_COD)){ guardarCodigoSW(localStorage.getItem(K_COD)); iniciar(); } else pedirLogin();
 prepararSino();
 desenhar();
