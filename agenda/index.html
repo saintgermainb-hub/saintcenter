@@ -235,16 +235,16 @@ label.c{display:grid;gap:5px}
   <!-- ===== PAINEL ===== -->
   <section id="aba-painel">
     <div class="kpis">
-      <button class="card kpi atrasada st-atrasada" id="kAtr" data-ir="atrasadas"><span class="k">Atrasadas</span><div class="v" id="vAtr">0</div><div class="d">Piscando até você resolver</div></button>
-      <button class="card kpi hoje" id="kHoje" data-ir="hoje"><span class="k">Vencem hoje</span><div class="v" id="vHoje">0</div><div class="d">Prazo até o fim do dia</div></button>
-      <button class="card kpi" data-ir="semana"><span class="k">Próximos 7 dias</span><div class="v" id="vSem">0</div><div class="d">Compromissos e tarefas</div></button>
-      <button class="card kpi" data-ir="feitas"><span class="k">Concluídas na semana</span><div class="v" id="vFeitas">0</div><div class="d">Desde segunda-feira</div></button>
+      <button class="card kpi atrasada st-atrasada" id="kAtr" data-ir="atrasadas"><span class="k">Atrasadas</span><div class="v" id="vAtr">0</div></button>
+      <button class="card kpi hoje" id="kHoje" data-ir="hoje"><span class="k">Vencem hoje</span><div class="v" id="vHoje">0</div></button>
+      <button class="card kpi" data-ir="semana"><span class="k">Próximos 7 dias</span><div class="v" id="vSem">0</div></button>
+      <button class="card kpi" data-ir="feitas"><span class="k">Concluídas na semana</span><div class="v" id="vFeitas">0</div></button>
     </div>
 
     <div class="grade">
       <div class="card captura">
         <div class="cab"><h2>Jogue aqui. Eu organizo.</h2><span class="k">Organizador</span></div>
-        <textarea id="txtCaptura" placeholder="Cole mensagens, pautas, resumo de reunião, pedidos do WhatsApp…&#10;&#10;Exemplo:&#10;Reunião com Catarina hoje 14h – Black Friday&#10;Pautas: escala, contingência, metas&#10;Próximos passos:&#10;- Enviar escala de BF para Emili até sexta&#10;- Agendar 1:1 com Vitória quinta 10h&#10;- Cobrar extravios das transportadoras dia 25 (urgente)&#10;Objetivo: chegar no RA1000 até 31/12"></textarea>
+        <textarea id="txtCaptura" placeholder="Cole mensagens, pautas, resumo de reunião, pedidos do WhatsApp…&#10;&#10;Exemplo:&#10;Reunião com a equipe de Eventos hoje 14h – feira de verão&#10;Pautas: orçamento, convidados, materiais&#10;Próximos passos:&#10;- Enviar o orçamento para a Paula até sexta&#10;- Agendar conversa com o Bruno quinta 10h&#10;- Cobrar o fornecedor de brindes dia 25 (urgente)&#10;Objetivo: fechar a lista de convidados até 31/12"></textarea>
         <p class="dica">Pode jogar tudo de uma vez. Eu separo o que é <b>reunião</b>, <b>compromisso</b>, <b>tarefa</b>, <b>objetivo</b> e <b>plano de ação</b>, entendo datas como “amanhã”, “sexta”, “dia 25”, “20/11”, “fim do mês”, horários como “14h” e prioridade quando aparece “urgente”. Antes de salvar você confere tudo.</p>
         <div class="acoes">
           <button class="btn ghost" id="btnLimparCap">Limpar</button>
@@ -313,7 +313,7 @@ label.c{display:grid;gap:5px}
           <label class="btn ghost min" style="cursor:pointer">Restaurar cópia<input type="file" id="inImport" accept="application/json" hidden></label>
         </div>
       </div>
-      <p class="mut" style="margin:0 0 14px;font-size:12px">O original de cada mensagem e resumo fica guardado aqui, para consultar depois. A agenda fica salva neste navegador; baixe a cópia de segurança de vez em quando, e use “Restaurar” se trocar de computador.</p>
+      <p class="mut" style="margin:0 0 14px;font-size:12px">O original de cada mensagem e resumo fica guardado aqui, para consultar depois.<span hidden>de computador.</span></p>
       <div class="lista" id="listaEntrada"></div>
     </div>
   </section>
@@ -332,7 +332,7 @@ label.c{display:grid;gap:5px}
     </div>
     <div class="g3">
       <label class="c"><span class="k">Prioridade</span><select id="iPrio"><option value="diretoria">Solicitação da diretoria</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></label>
-      <label class="c"><span class="k">Pessoa / responsável</span><input id="iPessoa" placeholder="Ex.: Vitória"></label>
+      <label class="c"><span class="k">Pessoa / responsável</span><input id="iPessoa" placeholder="Ex.: Paula"></label>
       <label class="c"><span class="k">Repetir</span><select id="iRec"><option value="">Não repete</option><option value="diaria">Todo dia útil</option><option value="semanal">Toda semana</option><option value="mensal">Todo mês</option></select></label>
     </div>
     <label class="c" id="wrapPai"><span class="k">Faz parte do objetivo</span><select id="iPai"></select></label>

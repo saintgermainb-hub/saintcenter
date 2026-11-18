@@ -152,7 +152,7 @@
       <span><i style="background:#ffb3dc"></i>Tarefa</span>
       <span><i style="background:#aea9b4"></i>Compromisso</span>
       <span><i style="background:#ff1fb4"></i>Objetivo / plano</span>
-      <span><i class="al"></i>Atrasada (pisca)</span>
+      <span><i class="al"></i>Atrasada</span>
       <span><i class="hj"></i>Vence hoje</span></div>`);
   }
 
@@ -209,7 +209,7 @@
       </section>
       <section class="reu-col">
         <div class="reu-t"><span class="k">2 · Anotações da reunião</span><span class="mut" id="rqSalvo"></span></div>
-        <textarea id="rqNotas" placeholder="Vá anotando o que for falado, uma ideia por linha.&#10;&#10;Exemplos:&#10;Diretoria pediu foco no Reclame Aqui em dezembro&#10;Decidimos manter a escala 12x36 na Black Friday&#10;Vitória: revisar macros do SaintDesk até sexta&#10;Enviar relatório de 5ATM para o Junior amanhã (urgente)&#10;Nova reunião com o Time Avant dia 25 às 15h"></textarea>
+        <textarea id="rqNotas" placeholder="Vá anotando o que for falado, uma ideia por linha.&#10;&#10;Exemplos:&#10;Diretoria pediu prioridade para a feira de verão&#10;Decidimos manter o orçamento aprovado&#10;Paula: revisar a lista de convidados até sexta&#10;Enviar o relatório final para o Bruno amanhã (urgente)&#10;Nova reunião com o fornecedor dia 25 às 15h"></textarea>
         <p class="reu-dica">Tudo é salvo sozinho enquanto você escreve. Quem vai fazer: “Nome: ação”. Prazo: “até sexta”, “amanhã”, “dia 25”. Decisão: comece com “Decidimos…” ou “Ficou definido…”.</p>
       </section>
     </div>
@@ -1173,7 +1173,7 @@
   <section class="sec" id="sec" hidden aria-label="Secretária">
     <div class="sec-cab"><h3>${LACO}Secretária</h3><button type="button" id="secFechar" aria-label="Fechar">×</button></div>
     <div class="sec-mic"><button type="button" class="mic" id="secMic" aria-label="Falar">🎙</button>
-      <span class="mut" id="secDica">Toque no microfone e fale, ou escreva abaixo. Ex.: “coloca na minha agenda que dia 8/12 às 16h a Márcia da Loggi vem visitar o time do Suporte”.</span></div>
+      <span class="mut" id="secDica">Toque no microfone e fale, ou escreva abaixo. Ex.: “coloca na minha agenda que dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”.</span></div>
     <textarea id="secTxt" placeholder="O que coloco na sua agenda?"></textarea>
     <div class="sec-acoes"><button class="btn" id="secOk">Colocar na agenda</button></div>
     <div class="sec-res" id="secRes"></div>
@@ -1351,7 +1351,7 @@
   document.head.appendChild(cssB);
   document.querySelector('nav.abas').insertAdjacentHTML('beforebegin', `<div class="busca" id="busca">
     <div class="cx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-    <input id="buscaTxt" type="text" placeholder="Buscar um assunto: troca, Loggi, Reclame Aqui, Vitória…" autocomplete="off" enterkeyhint="search" aria-label="Buscar na agenda">
+    <input id="buscaTxt" type="text" placeholder="Buscar um assunto, uma pessoa ou uma palavra…" autocomplete="off" enterkeyhint="search" aria-label="Buscar na agenda">
     <button type="button" class="limpar" id="buscaLimpar" aria-label="Limpar busca" hidden>×</button></div>
     <div class="busca-res" id="buscaRes" hidden></div></div>`);
   const PARADAS = new Set('a o e de da do das dos em no na nos nas um uma uns umas que quando como onde qual quais para pra pro com sem por pelo pela ao aos as os se foi era ser ter tem the mais menos sobre isso essa esse esta este aquele aquela nos eu voce ja muito pouco'.split(' '));
@@ -1409,7 +1409,7 @@
       const tipo = r.fonte === 'item' ? (TIPO_CURTO[r.it.tipo] || r.it.tipo) : 'Caixa de entrada';
       const quando = r.data ? fmtData(r.data, true) : 'sem data';
       return `<button type="button" class="r" data-achado="${i}"><div class="t">${marcar(tit, r.ws)}</div><div class="m"><b>${esc(tipo)}</b> · ${esc(quando)}${r.fonte === 'item' && r.it.hora ? ' · ' + esc(r.it.hora) : ''} · encontrado em ${esc(r.trecho.rot)}</div>${r.trecho.rot !== 'Título' ? `<div class="s">${marcar(r.trecho.txt, r.ws)}</div>` : ''}</button>`;
-    }).join('') : `<div class="vz">Nada encontrado para “${esc(q)}”. Tente outra palavra (ex.: troca, devolução, Loggi).</div>`;
+    }).join('') : `<div class="vz">Nada encontrado para “${esc(q)}”. Tente outra palavra parecida.</div>`;
   }
   function abrirAchado(r){
     $('buscaRes').hidden = true;
