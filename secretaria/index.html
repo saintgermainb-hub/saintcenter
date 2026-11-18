@@ -242,6 +242,7 @@ $('agenda').addEventListener('load', () => {
 
 /* ---------- conversa ---------- */
 let CHAT = []; try{ CHAT = JSON.parse(localStorage.getItem(K_CHAT) || '[]'); }catch(_){}
+CHAT.forEach(m => { if(m.de === 'ela' && /Márcia da Loggi|buscar troca e devolução/.test(m.texto || '')) m.texto = m.texto.replace(/“dia 8\/12[^”]*”/, '“dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”').replace('“buscar troca e devolução”', '“buscar orçamento”'); });
 function guardarChat(){ CHAT = CHAT.slice(-300); try{ localStorage.setItem(K_CHAT, JSON.stringify(CHAT)); }catch(_){} }
 const horaDe = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
 function rotDia(ms){
@@ -284,7 +285,7 @@ function falar(de, texto, extra){ CHAT.push(Object.assign({ de, texto, em:Date.n
 function boasVindas(){
   if(CHAT.length){ desenhar(); return; }
   const n = primeiroNome();
-  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Me mande por mensagem ou áudio o que precisa e eu coloco na sua agenda.\n\nEx.: “dia 8/12 às 16h a Márcia da Loggi vem visitar o time do Suporte”.\n\nVocê também pode perguntar: “o que tenho hoje?”, “o que está atrasado?” ou “buscar troca e devolução”.`);
+  falar('ela', `Oi${n ? ', ' + n : ''}! Sou sua secretária. Me mande por mensagem ou áudio o que precisa e eu coloco na sua agenda.\n\nEx.: “dia 10/12 às 15h a Ana, do fornecedor, vem visitar a equipe”.\n\nVocê também pode perguntar: “o que tenho hoje?”, “o que está atrasado?” ou “buscar orçamento”.`);
 }
 
 /* ---------- anexos: foto, print, PDF, Word, Excel ---------- */
@@ -423,7 +424,7 @@ function receber(texto, audio){
     if(mb && SEC.buscar){
       const q = texto.trim().split(/\s+/).slice(1).join(' ').replace(/^(por|sobre|o|a)\s+/i, '');
       const r = q ? SEC.buscar(q) : [];
-      if(!r.length){ falar('ela', q ? 'Não encontrei nada sobre “' + q + '”. Tente outra palavra.' : 'O que eu procuro? Ex.: “buscar troca e devolução”.'); return; }
+      if(!r.length){ falar('ela', q ? 'Não encontrei nada sobre “' + q + '”. Tente outra palavra.' : 'O que eu procuro? Ex.: “buscar orçamento”.'); return; }
       const itens = r.filter(x => x.fonte === 'item').slice(0, 10), ent = r.filter(x => x.fonte === 'entrada').slice(0, 3);
       falar('ela', 'Encontrei ' + r.length + (r.length === 1 ? ' resultado' : ' resultados') + ' para “' + q + '”:' + ent.map(x => '\n\n📥 Caixa de entrada: “' + x.trecho.slice(0, 180) + '”').join(''), { cards: itens.map(x => ({ id:x.id, titulo:x.titulo })) });
       return;
@@ -432,7 +433,7 @@ function receber(texto, audio){
     if(p){ falar('ela', p.texto, { cards: p.lista.slice(0, 25).map(i => ({ id:i.id, titulo:i.titulo })) }); return; }
     let feitos = [];
     try{ feitos = SEC.anotar(texto); }catch(e){ feitos = []; }
-    if(!feitos.length){ falar('ela', 'Não entendi bem. Me diga o que é, o dia e o horário. Ex.: “sexta às 10h alinhamento com a Vitória”.'); return; }
+    if(!feitos.length){ falar('ela', 'Não entendi bem. Me diga o que é, o dia e o horário. Ex.: “sexta às 10h alinhamento com o Bruno”.'); return; }
     const semData = feitos.filter(i => !i.data).length;
     const t = (feitos.length === 1 ? 'Anotado na sua agenda.' : `Anotei ${feitos.length} itens na sua agenda.`) + (semData ? `\n${semData === 1 ? 'Ficou sem data' : semData + ' ficaram sem data'}: abra para ajustar se quiser.` : '');
     falar('ela', t, { cards: feitos.map(i => ({ id:i.id, titulo:i.titulo, tipo:i.tipo, data:i.data, hora:i.hora, pessoa:i.pessoa, podeDesfazer:true })) });
