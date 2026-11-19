@@ -232,7 +232,7 @@
   const secCab = document.querySelector('#sec .sec-cab h3');
   if(secCab && !secCab.querySelector('.sec-st')){ secCab.insertAdjacentHTML('beforeend', '<span><span style="display:block">Minha secretária</span><span class="sec-st" id="secSt"></span></span>'); [...secCab.childNodes].forEach(n => { if(n.nodeType === 3 && /Secret/.test(n.textContent)) n.remove(); }); }
   const secRes = $('secRes');
-  if(secRes && !$('secIA')) secRes.insertAdjacentHTML('afterend', `<div class="sec-ia" id="secIA" hidden><span>Para eu conversar de verdade: abra <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>, crie a chave (começa com AIza…) e cole aqui na conversa. Uma vez só, vale também no celular.</span></div>`);
+  if(secRes && !$('secIA')) secRes.insertAdjacentHTML('afterend', `<div class="sec-ia" id="secIA" hidden><span>Para eu conversar de verdade: abra <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>, crie a chave (começa com AIza… ou AQ.) e cole aqui na conversa. Uma vez só, vale também no celular.</span></div>`);
   function estadoIA(){
     const S = window.SG_secretaria, on = !!(S && S.ia && S.ia.ligada());
     const a = $('secSt'); if(a){ a.textContent = on ? 'Inteligência ligada' : 'Inteligência desligada'; a.classList.toggle('off', !on); }
