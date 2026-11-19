@@ -650,7 +650,7 @@ document.addEventListener('visibilitychange', () => { if(document.visibilityStat
 /* ---------- início ---------- */
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 // versão nova publicada: limpa a cópia guardada no celular e abre a nova
-const VERSAO = '2026-11-19-2';
+const VERSAO = '2026-11-19-3';
 async function checarVersao(){
   try{
     const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
