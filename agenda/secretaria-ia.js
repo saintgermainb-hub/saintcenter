@@ -14,10 +14,10 @@
 
   /* ---------- chave ---------- */
   const chave = () => String((DB.ajustes && DB.ajustes.ia && DB.ajustes.ia.chave) || '').trim();
-  const provedor = k => /^sk-ant-/.test(k) ? 'claude' : /^AIza/.test(k) ? 'gemini' : '';
+  const provedor = k => /^sk-ant-/.test(k) ? 'claude' : /^(AIza|AQ\.)/.test(k) ? 'gemini' : '';
   const ligada = () => !!provedor(chave());
   function guardarChave(k){ DB.ajustes = Object.assign({}, DB.ajustes || {}, { ia: { chave:k, em:new Date().toISOString() } }); salvar(); try{ render(); }catch(_){} }
-  const RX_CHAVE = /\b(AIza[0-9A-Za-z_\-]{30,}|sk-ant-[0-9A-Za-z_\-]{20,})\b/;
+  const RX_CHAVE = /(?:^|\s)(AIza[0-9A-Za-z_\-]{30,}|AQ\.[0-9A-Za-z_\-.]{20,}|sk-ant-[0-9A-Za-z_\-]{20,})(?=\s|$)/;
 
   /* ---------- memória da conversa ---------- */
   let HIST = []; try{ HIST = JSON.parse(localStorage.getItem(KHIST) || '[]'); }catch(_){}
@@ -237,7 +237,7 @@ Use "acoes":[] quando for só conversa. Em "campos" mande só o que muda. Nunca 
   }
 
   /* ---------- ligar: a chave pode ser colada na própria conversa ---------- */
-  const PASSO = 'Para eu conversar de verdade e entender tudo que você fala, preciso ligar minha inteligência (uma vez só, vale no computador e no celular):\n\n1. Abra aistudio.google.com/apikey com sua conta Google\n2. Toque em “Create API key” e copie a chave (começa com AIza…)\n3. Cole a chave aqui na conversa e envie\n\nAté lá, sigo anotando do jeito simples.';
+  const PASSO = 'Para eu conversar de verdade e entender tudo que você fala, preciso ligar minha inteligência (uma vez só, vale no computador e no celular):\n\n1. Abra aistudio.google.com/apikey com sua conta Google\n2. Toque em “Create API key” e copie a chave (começa com AIza… ou AQ.)\n3. Cole a chave aqui na conversa e envie\n\nAté lá, sigo anotando do jeito simples.';
   let avisouHoje = false;
 
   function conversar(entrada){
@@ -247,7 +247,7 @@ Use "acoes":[] quando for só conversa. Em "campos" mande só o que muda. Nunca 
       guardarChave(m[1]);
       return testar().then(ok => ok
         ? R(`Inteligência ligada${NOME ? ', ' + NOME : ''}! Agora eu converso de verdade: pode falar normalmente, por texto ou áudio. Remarco, concluo, desmarco (sempre confirmo antes), anoto nas reuniões e cuido dos seus projetos.`)
-        : R('Guardei a chave, mas ela não funcionou. Confira se copiou inteira (começa com AIza…) e cole de novo.'));
+        : R('Guardei a chave, mas ela não funcionou. Confira se copiou inteira (começa com AIza… ou AQ.) e cole de novo.'));
     }
     if(/^(desligar|tirar|remover|apagar) (a )?(intelig[eê]ncia|chave)/i.test(norm(t))){ guardarChave(''); return R('Desliguei a inteligência. Volto a anotar do jeito simples.'); }
     if(!ligada()){
@@ -256,7 +256,7 @@ Use "acoes":[] quando for só conversa. Em "campos" mande só o que muda. Nunca 
       return r;
     }
     return conversarIA(t).catch(e => {
-      if(e && e.chave) return R('Minha inteligência não conectou: a chave foi recusada. Cole uma chave nova aqui na conversa (começa com AIza…).');
+      if(e && e.chave) return R('Minha inteligência não conectou: a chave foi recusada. Cole uma chave nova aqui na conversa (começa com AIza… ou AQ.).');
       const r = antigoConversar(entrada);
       r.texto = r.texto + (e && e.status === 429 ? '\n\n(Minha inteligência atingiu o limite do momento; respondi do jeito simples.)' : '');
       return r;
