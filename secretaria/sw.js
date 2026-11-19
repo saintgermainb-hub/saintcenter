@@ -1,5 +1,5 @@
 /* Secretária · Agenda Coordenação — abre rápido e recebe os avisos (notificações) */
-const CACHE = 'secretaria-v4';
+const CACHE = 'secretaria-v6';
 const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwCgpSVpFrn3gvsS2HGniMxP14pNNmVIRXLGqP8_F3g/exec';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icone-192.png', 'icone-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE.map(u => new Request(u, { cache:'reload' })))).then(() => self.skipWaiting())); });
