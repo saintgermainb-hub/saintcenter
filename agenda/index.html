@@ -985,12 +985,12 @@ if(LIBERADO){
 <script src="projetos.js?v=1"></script>
 <script src="visual.js?v=5"></script>
 <script src="datas.js?v=3"></script>
-<script src="secretaria-ia.js?v=4"></script>
+<script src="secretaria-ia.js?v=5"></script>
 <script src="sync.js?v=2"></script>
 <script>
 /* atualiza sozinha quando sai uma versão nova (aba ou aplicativo aberto há muito tempo) */
 (function(){
-  const VERSAO = '2026-11-19-3';
+  const VERSAO = '2026-11-19-4';
   async function checar(){
     try{
       const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
