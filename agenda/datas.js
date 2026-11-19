@@ -27,7 +27,7 @@
     ['10-15','comemorativa','Dia do Professor','Homenagem a quem ensina. Na liderança, ensinar também é parte do trabalho: cada treinamento forma o time de amanhã.'],
     ['11-02','feriado','Finados','Dia de memória e saudade, de honrar quem veio antes e deixou sua marca em nós.'],
     ['11-15','feriado','Proclamação da República','Em 15 de novembro de 1889, o Marechal Deodoro da Fonseca proclamou a República, encerrando o Império no Brasil.'],
-    ['11-19','comemorativa','Dia da Mulher Empreendedora','Criado em 2014 e celebrado na ONU, reconhece mulheres que constroem negócios, lideram equipes e abrem caminho para outras.'],
+    ['11-19','comemorativa','Dia Mundial do Empreendedorismo Feminino','Estabelecido pela ONU em 2014, reconhece mulheres que constroem negócios, lideram equipes e abrem caminho para outras.'],
     ['11-20','feriado','Dia da Consciência Negra','Lembra a morte de Zumbi dos Palmares, em 20 de novembro de 1695, líder do maior quilombo do período colonial e símbolo da resistência negra. Desde 2024 é feriado nacional. É dia de reflexão sobre a história, o racismo e o compromisso com a igualdade, inclusive dentro das empresas.'],
     ['12-24','comemorativa','Véspera de Natal','Dia de alta demanda no varejo e de muita emoção nos presentes: atenção redobrada aos prazos de entrega.'],
     ['12-25','feriado','Natal','Celebração do nascimento de Jesus. Tempo de gratidão, família e generosidade.'],
