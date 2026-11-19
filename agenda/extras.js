@@ -1634,6 +1634,163 @@
   });
   window.SG_verItem = id => { const it = DB.itens.find(i => i.id === id); if(it){ if(ehReuniao(it)) abrirReuniao(it); else verItem(it); } };
 
+  /* ---------- Anexos e exemplos dentro de projetos, tarefas e planos (não só em reuniões) ---------- */
+  const ROT_DENTRO = { projeto:'Dentro do projeto', tarefa:'Dentro da tarefa', plano:'Dentro do plano de ação', objetivo:'Dentro do objetivo', compromisso:'Dentro do compromisso' };
+  const cssIA = document.createElement('style');
+  cssIA.textContent = `
+    .it-anx{display:grid;gap:8px;border:1px dashed #f2c4df;border-radius:14px;padding:10px 12px;background:var(--rosa-bg)}
+    .it-anx.sobre{border-color:var(--pink);background:#ffe4f3}
+    .it-anx .topo{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+    .it-anx .mut{font-size:12px}
+    .it-anx-l{display:grid;gap:6px}
+    .it-anx-l:empty{display:none}
+    .it-anx-c{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:#fff;border:1px solid #f2d3e6;border-radius:12px;padding:7px 10px;font-size:13px}
+    .it-anx-c b{font-weight:400;flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .it-anx-c .mut{font-size:11px}
+    .it-anx-c button{font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid #f2d3e6;border-radius:999px;padding:4px 10px;color:var(--g1);background:var(--rosa-bg)}
+    .it-anx-c button:disabled{opacity:.4}
+    #dlgVer .ver-anx{display:flex;flex-wrap:wrap;gap:6px}
+    #dlgVer .ver-anx button{font-size:11px;letter-spacing:.06em;border:1px solid #f2d3e6;border-radius:999px;padding:6px 12px;color:var(--g1);background:var(--rosa-bg)}
+  `;
+  document.head.appendChild(cssIA);
+  const nomeDoArquivo = f => (!f.name || /^image\.(png|jpe?g)$/i.test(f.name)) ? 'Print ' + new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '') + '.png' : f.name;
+  const limparTexto = (t, nome) => { const s = String(t || '').replace(/ /g, ' ').replace(/\r/g, ''); return (/\.pdf$/i.test(nome || '') ? refluir(s) : s).slice(0, 20000).trim(); };
+  async function abrirAnexoId(id){
+    try{ const b = await lerArq(id); if(!b){ toast('Arquivo não encontrado neste navegador.'); return; } window.open(urlsAnexo[id] || (urlsAnexo[id] = URL.createObjectURL(b)), '_blank'); }
+    catch(_){ toast('Não consegui abrir o arquivo.'); }
+  }
+
+  // 1) Janela de editar/novo item: área de anexos (arquivo, PDF, foto, print com Ctrl+V)
+  $('iNotas').closest('label').insertAdjacentHTML('afterend', `<div class="it-anx" id="iAnexos">
+    <div class="topo"><span class="k">Anexos · documentos, PDF, fotos e prints</span>
+      <label class="btn ghost min" style="cursor:pointer">Anexar<input type="file" id="iArq" multiple hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.html"></label></div>
+    <span class="mut">Arraste aqui, clique em “Anexar” ou cole um print com Ctrl+V. O arquivo fica guardado no item e, se eu conseguir ler, você pode levar o texto para as notas.</span>
+    <div class="it-anx-l" id="iAnxLista"></div></div>`);
+  let IANX = [], IANX_NOVOS = [], IANX_SALVO = false;
+  function desenharIAnx(){
+    $('iAnxLista').innerHTML = IANX.map(a => `<div class="it-anx-c" data-ia="${a.id}">
+      <b title="${esc(a.nome)}">📎 ${esc(a.nome)}</b>
+      <span class="mut">${a.estado === 'lendo' ? 'Lendo… ' + (a.pct ? a.pct + '%' : '') : a.texto ? 'Lido' : esc(a.erro || 'Guardado')}</span>
+      <button type="button" data-ia-abrir>Abrir</button>
+      <button type="button" data-ia-notas ${a.texto ? '' : 'disabled'}>Texto nas notas</button>
+      <button type="button" data-ia-rm>Remover</button></div>`).join('');
+  }
+  async function anexarNoItem(arquivos){
+    for(const f of arquivos){
+      if(f.size > 25 * 1024 * 1024){ toast(f.name + ': acima de 25 MB.'); continue; }
+      const nome = nomeDoArquivo(f);
+      const a = { id:uid(), nome, tipo:f.type || '', tamanho:f.size, em:new Date().toISOString(), texto:'', estado:'lendo', pct:0 };
+      try{ await guardarArq(a.id, f); }catch(_){ toast('Não consegui guardar ' + nome + ' neste navegador.'); continue; }
+      IANX.push(a); IANX_NOVOS.push(a.id); desenharIAnx();
+      extrairTexto(f, nome, pct => { a.pct = pct; desenharIAnx(); })
+        .then(t => { if(t === null){ a.estado = 'guardado'; a.erro = 'Guardado'; } else { a.texto = limparTexto(t, nome); a.estado = a.texto ? 'lido' : 'vazio'; if(!a.texto) a.erro = 'Guardado, sem texto'; } desenharIAnx(); })
+        .catch(e => { a.estado = 'erro'; a.erro = 'Guardado'; desenharIAnx(); });
+    }
+  }
+  $('iArq').addEventListener('change', e => { anexarNoItem([...e.target.files]); e.target.value = ''; });
+  $('dlgItem').addEventListener('paste', e => { const fs = [...(e.clipboardData && e.clipboardData.files || [])]; if(!fs.length) return; e.preventDefault(); e.stopPropagation(); anexarNoItem(fs); }, true);
+  const zonaI = $('iAnexos');
+  ['dragenter', 'dragover'].forEach(ev => $('dlgItem').addEventListener(ev, e => { if([...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files')){ e.preventDefault(); zonaI.classList.add('sobre'); } }));
+  ['dragleave', 'drop'].forEach(ev => $('dlgItem').addEventListener(ev, () => zonaI.classList.remove('sobre')));
+  $('dlgItem').addEventListener('drop', e => { const fs = [...(e.dataTransfer && e.dataTransfer.files || [])]; if(fs.length){ e.preventDefault(); anexarNoItem(fs); } });
+  $('iAnxLista').addEventListener('click', e => {
+    const c = e.target.closest('[data-ia]'); if(!c) return;
+    const a = IANX.find(x => x.id === c.dataset.ia); if(!a) return;
+    if(e.target.closest('[data-ia-abrir]')) return abrirAnexoId(a.id);
+    if(e.target.closest('[data-ia-notas]')){ if(!a.texto) return; const n = $('iNotas'); n.value = (n.value.trim() ? n.value.replace(/\s+$/, '') + '\n\n' : '') + '— ' + a.nome + ' —\n' + a.texto; toast('Texto colocado nas notas.'); return; }
+    const rm = e.target.closest('[data-ia-rm]');
+    if(rm){
+      if(rm.dataset.conf !== '1'){ rm.dataset.conf = '1'; rm.textContent = 'Confirmar'; setTimeout(() => { rm.dataset.conf = ''; rm.textContent = 'Remover'; }, 3000); return; }
+      IANX = IANX.filter(x => x.id !== a.id); desenharIAnx();
+    }
+  });
+  const abrirItemAnx = abrirItem;
+  abrirItem = function(it, padrao){
+    abrirItemAnx.apply(this, arguments);
+    IANX = ((it && it.anexos) || []).map(a => Object.assign({}, a)); IANX_NOVOS = []; IANX_SALVO = false; desenharIAnx();
+  };
+  $('fItem').addEventListener('submit', () => {
+    const tit = $('iTitulo').value.trim(); if(!tit) return;
+    const it = (EDIT && DB.itens.includes(EDIT)) ? EDIT : DB.itens.slice().reverse().find(i => i.titulo === tit);
+    if(!it) return;
+    const antes = (it.anexos || []).map(a => a.id), agora = new Set(IANX.map(a => a.id));
+    antes.filter(id => !agora.has(id)).forEach(id => apagarArq(id).catch(() => {}));
+    if(IANX.length || antes.length){ it.anexos = IANX.map(a => { const x = Object.assign({}, a); delete x.pct; if(x.estado === 'lendo') x.estado = 'guardado'; return x; }); salvar(); }
+    IANX_SALVO = true;
+  });
+  // fechou sem salvar: apaga só os arquivos novos que não foram usados
+  $('dlgItem').addEventListener('close', () => { if(!IANX_SALVO) IANX_NOVOS.forEach(id => apagarArq(id).catch(() => {})); IANX_NOVOS = []; });
+
+  // 2) Ver item: mostra os anexos
+  const verItemAnx = verItem;
+  verItem = function(it){
+    verItemAnx(it);
+    const l = it.anexos || []; if(!l.length) return;
+    const ac = $('verCorpo').querySelector('.ver-acoes');
+    if(ac) ac.insertAdjacentHTML('beforebegin', `<div><div class="k2" style="margin-bottom:8px">Anexos · ${l.length}</div><div class="ver-anx">${l.map(a => `<button type="button" data-ver-anx="${esc(a.id)}" title="Abrir">📎 ${esc(a.nome)}</button>`).join('')}</div></div>`);
+  };
+  $('dlgVer').addEventListener('click', e => { const b = e.target.closest('[data-ver-anx]'); if(b) abrirAnexoId(b.dataset.verAnx); });
+
+  // 3) Organizador: "Onde colocar" também em projetos, tarefas, planos e na linha do tempo do projeto
+  const ehDentro = v => /^(item|proj):/.test(v || '');
+  function atualizarVincItem(){
+    const v = $('pvVinc').value; if(!ehDentro(v)) return;
+    $('prevLista').hidden = true;
+    if(v.startsWith('item:')){
+      const it = DB.itens.find(i => i.id === v.slice(5));
+      $('pvSalvar').textContent = 'Levar para ' + (it && it.tipo === 'projeto' ? 'o projeto' : 'o item');
+      $('pvVincInfo').textContent = 'O texto entra nas notas de “' + (it ? it.titulo : '') + '” e os anexos ficam guardados nele. Nada é apagado e nenhum item solto é criado.' + (it && it.projetoId ? ' Aparece também na linha do tempo do projeto vinculado.' : '');
+    } else {
+      $('pvSalvar').textContent = 'Registrar no projeto';
+      $('pvVincInfo').textContent = 'Vira um registro na linha do tempo do projeto. Os anexos ficam guardados na Caixa de entrada.';
+    }
+  }
+  $('pvVinc').addEventListener('change', atualizarVincItem);
+  const abrirPreviaAnx = abrirPrevia;
+  abrirPrevia = function(texto){
+    abrirPreviaAnx(texto);
+    if(!$('dlgPrev').open) return;
+    const sel = $('pvVinc'), atual = sel.value;
+    const reus = [...sel.options].filter(o => o.value);
+    const itens = DB.itens.filter(i => !ehReuniao(i) && !i.feito && ROT_DENTRO[i.tipo])
+      .sort((a, b) => (a.tipo === 'projeto' ? 0 : 1) - (b.tipo === 'projeto' ? 0 : 1) || String(b.criadoEm || '').localeCompare(String(a.criadoEm || ''))).slice(0, 40);
+    const projs = window.SG_projetos ? SG_projetos.lista().filter(p => p.ativo) : [];
+    let html = '<option value="">Criar itens separados na agenda</option>';
+    if(itens.length) html += '<optgroup label="Projetos, tarefas e planos">' + itens.map(i => `<option value="item:${esc(i.id)}">${esc(ROT_DENTRO[i.tipo])}: ${esc(i.titulo.length > 70 ? i.titulo.slice(0, 68) + '…' : i.titulo)}</option>`).join('') + '</optgroup>';
+    if(projs.length) html += '<optgroup label="Linha do tempo">' + projs.map(p => `<option value="proj:${esc(p.id)}">Linha do tempo do projeto: ${esc(p.nome)}</option>`).join('') + '</optgroup>';
+    if(reus.length) html += '<optgroup label="Reuniões">' + reus.map(o => `<option value="${esc(o.value)}">${esc(o.textContent)}</option>`).join('') + '</optgroup>';
+    sel.innerHTML = html; sel.value = atual;
+    atualizarVincItem();
+  };
+  const salvarPrevAnx = $('pvSalvar').onclick;
+  $('pvSalvar').onclick = async function(){
+    const v = $('pvVinc').value;
+    if(!ehDentro(v)) return salvarPrevAnx.call(this);
+    const lista = PEND.slice(); PEND = []; desenharPend();
+    const texto = String(PREV_TEXTO || '').trim();
+    const guardar = async () => { const out = []; for(const p of lista){ const id = uid(); try{ await guardarArq(id, p.file); }catch(_){ continue; } out.push({ id, nome:p.nome, tipo:p.file.type || '', tamanho:p.file.size, em:new Date().toISOString(), texto:limparTexto(p.texto, p.nome), estado: p.texto ? 'lido' : 'guardado', erro: p.texto ? '' : 'Guardado' }); } return out; };
+    const quando = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    if(v.startsWith('item:')){
+      const it = DB.itens.find(i => i.id === v.slice(5)); if(!it) return;
+      const anexos = await guardar();
+      if(!Array.isArray(it.anexos)) it.anexos = [];
+      it.anexos.push(...anexos);
+      if(texto) it.notas = (it.notas ? String(it.notas).replace(/\s+$/, '') + '\n\n' : '') + '— Registro de ' + quando + ' —\n' + texto;
+      DB.entradas.push({ id:uid(), em:new Date().toISOString(), texto, gerados:0, item:it.id, anexosNomes:anexos.map(a => a.nome) });
+      salvar(); $('dlgPrev').close(); capTxt.value = ''; render();
+      verItem(it);
+      toast('Levado para “' + it.titulo + '”.');
+    } else {
+      const pid = v.slice(5);
+      const anexos = await guardar();
+      const prim = texto.split('\n').map(l => l.replace(/^[#*\s-]+/, '').replace(/\*\*/g, '').trim()).find(Boolean) || (anexos[0] && anexos[0].nome) || 'Registro';
+      if(window.SG_projetos) SG_projetos.registrar({ projetoId:pid, tipo:'nota', titulo: prim.slice(0, 120), texto: texto + (anexos.length ? '\n\nAnexos: ' + anexos.map(a => a.nome).join(', ') : '') });
+      DB.entradas.push({ id:uid(), em:new Date().toISOString(), texto, gerados:0, anexos:anexos.map(a => ({ id:a.id, nome:a.nome, tipo:a.tipo, tamanho:a.tamanho, texto:a.texto })), anexosNomes:anexos.map(a => a.nome) });
+      salvar(); $('dlgPrev').close(); capTxt.value = ''; render();
+      toast('Registrado na linha do tempo do projeto.');
+    }
+  };
+
   /* ---------- dentro do aplicativo do celular ---------- */
   if(/[?&]app=1/.test(location.search)){
     document.documentElement.classList.add('modo-app');
