@@ -237,7 +237,7 @@
   }
 
   function abrirReuniao(it){
-    R = it;
+    R = it; window.SG_reuAtual = it;
     if(!Array.isArray(R.pauta)) R.pauta = [];
     // pauta que veio do organizador ("Pautas: a, b, c") vira lista
     if(!R.pauta.length && R.notas){
@@ -1256,15 +1256,18 @@
   function saudar(){
     if($('secRes').children.length || !(window.SG_secretaria && SG_secretaria.conversar)) return;
     const h = new Date().getHours();
-    try{ mostrarConversa('', SG_secretaria.conversar(h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite')); }catch(_){}
+    try{ const fn = SG_secretaria.saudarLocal || SG_secretaria.conversar; Promise.resolve(fn(h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite')).then(r => { if(!$('secRes').children.length) mostrarConversa('', r); }).catch(() => {}); }catch(_){}
   }
   function executarSecretaria(){
     const t = $('secTxt').value.trim(); if(!t) return;
     if(window.SG_secretaria && window.SG_secretaria.conversar){
       $('secTxt').value = ''; ajustarSec(); balaoEu(t);
-      let r; try{ r = window.SG_secretaria.conversar(t); }catch(_){ r = { texto:'Tive um problema para entender agora. Pode repetir de outro jeito?' }; }
+      const falha = { texto:'Tive um problema para entender agora. Pode repetir de outro jeito?' };
       $('secRes').insertAdjacentHTML('beforeend', '<div class="sec-digitando" id="secDig">digitando…</div>'); rolarFim();
-      setTimeout(() => { const d = $('secDig'); d && d.remove(); mostrarConversa('', r); }, 350);
+      const t0 = Date.now();
+      Promise.resolve().then(() => window.SG_secretaria.conversar(t)).catch(() => falha).then(r => {
+        setTimeout(() => { const d = $('secDig'); d && d.remove(); mostrarConversa('', r || falha); }, Math.max(0, 350 - (Date.now() - t0)));
+      });
       return;
     }
     const feitos = secretariaCore(t);
@@ -1283,7 +1286,9 @@
   $('secFechar').onclick = () => { if(ouvindo){ executarAoParar = null; rec && rec.stop(); } $('sec').hidden = true; };
   $('secRes').addEventListener('click', e => {
     const op = e.target.closest('[data-sec-op]');
-    if(op && window.SG_secretaria && SG_secretaria.executar){ const a = SEC_OPS[op.dataset.secOp]; op.parentElement.querySelectorAll('button').forEach(b => b.disabled = true); op.style.borderColor = 'var(--pink)'; mostrarConversa(op.textContent, SG_secretaria.executar(a)); return; }
+    if(op && window.SG_secretaria && SG_secretaria.executar){ const a = SEC_OPS[op.dataset.secOp]; op.parentElement.querySelectorAll('button').forEach(b => b.disabled = true); op.style.borderColor = 'var(--pink)';
+      balaoEu(op.textContent); $('secRes').insertAdjacentHTML('beforeend', '<div class="sec-digitando" id="secDig">digitando…</div>'); rolarFim();
+      Promise.resolve().then(() => SG_secretaria.executar(a)).catch(() => ({ texto:'Não consegui fazer isso agora.' })).then(r => { const d = $('secDig'); d && d.remove(); mostrarConversa('', r); }); return; }
     const df = e.target.closest('[data-sec-desf]');
     if(df && window.SG_secretaria && SG_secretaria.desfazerCard){ SG_secretaria.desfazerCard(SEC_OPS[df.dataset.secDesf]); df.remove(); toast('Desfeito.'); return; }
     const d = e.target.closest('[data-sec-desfazer]');
@@ -1588,7 +1593,7 @@
   document.body.insertAdjacentHTML('beforeend', '<dialog id="dlgVer"><div class="dlg" id="verCorpo"></div></dialog>');
   let VER = null;
   function verItem(it){
-    VER = it; const st = status(it);
+    VER = it; window.SG_verAtual = it; const st = status(it);
     const quando = it.data ? fmtData(it.data, true) + (it.hora ? ' · ' + it.hora : '') : 'Sem data';
     const stTxt = it.feito ? 'Concluído' : st === 'atrasada' ? 'Atrasado' : st === 'hoje' ? 'Hoje' : st === 'passou' ? 'Já passou' : '';
     const prio = { diretoria:'Solicitação da diretoria', alta:'Alta', media:'Média', baixa:'Baixa' }[it.prioridade] || '';
