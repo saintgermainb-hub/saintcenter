@@ -6,6 +6,7 @@
 <title>Agenda Coordenação · Saint Center</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="../favicon.png">
+<meta name="theme-color" content="#77503f">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&display=swap">
 <style>
 :root{
@@ -977,13 +978,19 @@ if(LIBERADO){
   window.addEventListener('storage', ev => { if(ev.key === CHAVE){ carregar(); render(); } });
 }
 </script>
-<script src="extras.js?v=16"></script>
-<script src="secretaria-conversa.js?v=2"></script>
-<script src="sync.js?v=1"></script>
+<script src="extras.js?v=17"></script>
+<script src="secretaria-conversa.js?v=3"></script>
+<script src="lacos.js?v=1"></script>
+<script src="tema.js?v=2"></script>
+<script src="projetos.js?v=1"></script>
+<script src="visual.js?v=4"></script>
+<script src="datas.js?v=2"></script>
+<script src="secretaria-ia.js?v=2"></script>
+<script src="sync.js?v=2"></script>
 <script>
 /* atualiza sozinha quando sai uma versão nova (aba ou aplicativo aberto há muito tempo) */
 (function(){
-  const VERSAO = '2026-11-18-3';
+  const VERSAO = '2026-11-19-1';
   async function checar(){
     try{
       const j = await fetch('../versao.json?x=' + Date.now(), { cache:'no-store' }).then(r => r.json());
