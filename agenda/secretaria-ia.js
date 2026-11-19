@@ -103,10 +103,16 @@ Use "acoes":[] quando for só conversa. Em "campos" mande só o que muda. Nunca 
       contents: msgs.map(m => ({ role: m.papel === 'user' ? 'user' : 'model', parts:[{ text:m.texto }] })),
       generationConfig:{ temperature:.4, responseMimeType:'application/json', maxOutputTokens:4096 } };
     let ult;
-    for(const modelo of ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash']){
-      const r = await comTempo(fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent', { method:'POST', headers:{ 'Content-Type':'application/json', 'x-goog-api-key':k }, body:JSON.stringify(corpo) }), 40000);
+    // modelos atuais do Google; o último que funcionou é tentado primeiro
+    const LISTA = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
+    let bom = ''; try{ bom = localStorage.getItem('sg-ia-modelo') || ''; }catch(_){}
+    const modelos = bom ? [bom].concat(LISTA.filter(m => m !== bom)) : LISTA;
+    for(const modelo of modelos){
+      let r;
+      try{ r = await comTempo(fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent', { method:'POST', headers:{ 'Content-Type':'application/json', 'x-goog-api-key':k }, body:JSON.stringify(corpo) }), 25000); }
+      catch(e){ ult = e; continue; }
       const j = await r.json().catch(() => ({}));
-      if(r.ok){ const t = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join(''); if(t) return t; ult = new Error('vazio'); continue; }
+      if(r.ok){ const t = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join(''); if(t){ try{ localStorage.setItem('sg-ia-modelo', modelo); }catch(_){} return t; } ult = new Error('vazio'); continue; }
       ult = Object.assign(new Error((j.error && j.error.message) || 'Erro ' + r.status), { status:r.status });
       if(r.status === 400 && /api key|API_KEY/i.test(ult.message)) { ult.chave = true; throw ult; }
       if(r.status === 401 || r.status === 403){ ult.chave = true; throw ult; }
