@@ -252,7 +252,7 @@
     $('rqPautaIn').value = '';
     desenharPauta(); desenharAnexos(); desenharLinha(); desenharAcomp(); preencherQuando();
     PLANO = []; $('rqResultado').hidden = true;
-    if(R.resumo){ gerarResumo(); }
+    if(R.resumo || (Array.isArray(R.plano) && R.plano.length)){ gerarResumo(); }
     $('dlgReuniao').showModal();
   }
 
@@ -325,11 +325,26 @@
       if(RX_DECISAO.test(norm(r.orig)) && !RX_VERBO.test(norm(r.titulo))){ ponto(r.orig); return; }
       acoes.push(r);
     });
-    PLANO = acoes.map(r => ({
-      tmp: uid(), titulo: r.titulo, pessoa: r.pessoa || quemVai(r.orig) || nome, data: r.data, hora: r.hora,
-      prioridade: r.prioridade, tipo: (r.tipo === 'reuniao' || r.tipo === 'alinhamento') ? r.tipo : 'plano',
-      salvo: jaSalvas.has(norm(r.titulo)), incluir: !jaSalvas.has(norm(r.titulo))
-    }));
+    // o plano fica guardado na reunião: o que foi editado não volta ao que era
+    if(!Array.isArray(R.plano)) R.plano = [];
+    R.plano.forEach(a => {                       // ação que já está na agenda: mostra como está lá
+      const it = a.itemId && DB.itens.find(i => i.id === a.itemId); if(!it) return;
+      a.titulo = it.titulo; a.data = it.data || ''; a.prioridade = it.prioridade; a.pessoa = it.pessoa || nome;
+    });
+    const chaves = new Set(R.plano.map(a => a.chave || norm(a.titulo)).concat(R.plano.map(a => norm(a.titulo))));
+    acoes.forEach(r => {
+      const chave = norm(r.orig || r.titulo);
+      if(chaves.has(chave) || chaves.has(norm(r.titulo))) return;
+      chaves.add(chave);
+      const ja = jaSalvas.has(norm(r.titulo));
+      const itJa = ja ? DB.itens.find(i => i.origem === R.id && norm(i.titulo) === norm(r.titulo)) : null;
+      R.plano.push({
+        tmp: uid(), chave, titulo: r.titulo, pessoa: r.pessoa || quemVai(r.orig) || nome, data: r.data, hora: r.hora,
+        prioridade: r.prioridade, tipo: (r.tipo === 'reuniao' || r.tipo === 'alinhamento') ? r.tipo : 'plano',
+        salvo: ja, incluir: !ja, itemId: itJa ? itJa.id : ''
+      });
+    });
+    PLANO = R.plano;
     desenharPlano();
     $('rqResultado').hidden = false;
   }
@@ -337,20 +352,19 @@
   function textoResumo(){
     const p = R.pauta || [];
     const bl = (tit, l) => l.length ? '\n' + tit + '\n' + l.map(x => '• ' + x).join('\n') + '\n' : '';
-    const plano = PLANO.filter(a => a.incluir || a.salvo);
     return 'RESUMO DA REUNIÃO\n' + R.titulo + '\n' + [R.data ? fmtData(R.data, true) : '', R.hora, R.pessoa].filter(Boolean).join(' · ') + '\n'
       + bl('PAUTA TRATADA', p.filter(x => x.ok).map(rotPauta))
       + bl('PAUTA PENDENTE', p.filter(x => !x.ok).map(rotPauta))
       + bl('PONTOS DISCUTIDOS', PONTOS)
       + bl('DECISÕES', DECISOES)
       + bl('ANEXOS', (R.anexos || []).map(a => a.nome))
-      + (plano.length ? '\nPLANO DE AÇÃO\n' + plano.map((a,i) => (i+1) + '. ' + a.titulo + ' — ' + (a.pessoa || nome) + ' — ' + (a.data ? ddmm(a.data) + (a.hora ? ' ' + a.hora : '') : 'sem prazo')).join('\n') + '\n' : '');
+      + blocoPlano();
   }
 
   function desenharPlano(){
-    const n = PLANO.filter(a => a.incluir).length;
+    const n = PLANO.filter(a => a.incluir && !a.removida).length;
     $('rqPlanoN').textContent = PLANO.length ? n + (n === 1 ? ' ação marcada' : ' ações marcadas') : '';
-    $('rqPlano').innerHTML = PLANO.length ? PLANO.map((a,i) => `<div class="ac ${a.incluir || a.salvo ? '' : 'off'}">
+    $('rqPlano').innerHTML = PLANO.some(a => !a.removida) ? PLANO.map((a,i) => a.removida ? '' : `<div class="ac ${a.incluir || a.salvo ? '' : 'off'}">
       <input type="checkbox" data-ainc="${i}" ${a.incluir?'checked':''} ${a.salvo?'disabled':''} aria-label="Incluir">
       <div class="cps">
         <input data-ac="titulo" data-i="${i}" value="${esc(a.titulo)}" placeholder="O que fazer">
@@ -359,20 +373,56 @@
           <input type="date" data-ac="data" data-i="${i}" value="${a.data || ''}">
           <select data-ac="prioridade" data-i="${i}"><option value="diretoria" ${a.prioridade==='diretoria'?'selected':''}>Diretoria</option><option value="alta" ${a.prioridade==='alta'?'selected':''}>Alta</option><option value="media" ${a.prioridade==='media'?'selected':''}>Média</option><option value="baixa" ${a.prioridade==='baixa'?'selected':''}>Baixa</option></select>
         </div>
-        ${a.salvo ? '<span class="tg">Já está na agenda</span>' : ''}
+        ${a.salvo ? '<span class="tg">Já está na agenda · o que mudar aqui muda lá</span>' : `<button type="button" class="ac-rem" data-arem="${i}">Tirar do plano</button>`}
       </div></div>`).join('')
       : '<div class="vazio" style="padding:16px">Nenhuma ação encontrada nas anotações. Use “+ Ação” para incluir.</div>';
-    $('rqResumo').textContent = textoResumo();
+    mostrarResumoTxt();
   }
   const editarAcao = e => {
     const t = e.target;
-    if(t.dataset.ainc !== undefined){ PLANO[+t.dataset.ainc].incluir = t.checked; desenharPlano(); return; }
-    if(t.dataset.ac){ PLANO[+t.dataset.i][t.dataset.ac] = t.value; $('rqResumo').textContent = textoResumo(); }
+    if(t.dataset.ainc !== undefined){ PLANO[+t.dataset.ainc].incluir = t.checked; desenharPlano(); salvarDepois(); return; }
+    if(t.dataset.ac){
+      const a = PLANO[+t.dataset.i]; if(!a) return;
+      a[t.dataset.ac] = t.value;
+      // ação que já está na agenda: a mudança vai junto
+      const it = a.itemId ? DB.itens.find(i => i.id === a.itemId) : null;
+      if(it){
+        if(t.dataset.ac === 'titulo' && a.titulo.trim()) it.titulo = a.titulo.trim();
+        if(t.dataset.ac === 'pessoa') it.pessoa = norm(a.pessoa) === norm(nome) ? '' : a.pessoa.trim();
+        if(t.dataset.ac === 'data') it.data = a.data || '';
+        if(t.dataset.ac === 'prioridade') it.prioridade = a.prioridade;
+      }
+      mostrarResumoTxt(); salvarDepois();
+    }
   };
+  $('rqPlano').addEventListener('click', e => {
+    const b = e.target.closest('[data-arem]'); if(!b) return;
+    const a = PLANO[+b.dataset.arem]; if(!a || a.salvo) return;
+    a.removida = true; a.incluir = false; desenharPlano(); salvarDepois();
+  });
+  function blocoPlano(){
+    const plano = PLANO.filter(a => (a.incluir || a.salvo) && !a.removida);
+    return plano.length ? '\nPLANO DE AÇÃO\n' + plano.map((a,i) => (i+1) + '. ' + a.titulo + ' — ' + (a.pessoa || nome) + ' — ' + (a.data ? ddmm(a.data) + (a.hora ? ' ' + a.hora : '') : 'sem prazo')).join('\n') + '\n' : '';
+  }
+  // resumo editado à mão: só o bloco do plano de ação é atualizado, o resto do texto fica como você escreveu
+  function trocarPlano(txt){
+    const ls = String(txt || '').split('\n');
+    const ini = ls.findIndex(l => /^PLANO DE AÇÃO\s*$/.test(l.trim()));
+    if(ini < 0) return blocoPlano() ? String(txt || '').replace(/\n*$/, '\n') + blocoPlano() : String(txt || '');
+    let fim = ini + 1; while(fim < ls.length && /^\d+\.\s/.test(ls[fim].trim())) fim++;
+    const depois = ls.slice(fim).join('\n');
+    return ls.slice(0, ini).join('\n').replace(/\n*$/, '\n') + blocoPlano() + (depois.trim() ? '\n' + depois.replace(/^\n+/, '') : '');
+  }
+  function mostrarResumoTxt(){
+    if(document.activeElement === $('rqResumo')) return;
+    if(R && R.resumoEditado && R.resumo){ R.resumo = trocarPlano(R.resumo); $('rqResumo').textContent = R.resumo; }
+    else $('rqResumo').textContent = textoResumo();
+  }
   $('rqPlano').addEventListener('input', editarAcao);
   $('rqPlano').addEventListener('change', editarAcao);
   $('rqAddAcao').onclick = () => {
-    PLANO.push({ tmp:uid(), titulo:'', pessoa:nome, data:'', hora:'', prioridade:'media', tipo:'plano', incluir:true, salvo:false });
+    if(R && !Array.isArray(R.plano)) R.plano = PLANO;
+    PLANO.push({ tmp:uid(), chave:'manual:' + uid(), titulo:'', pessoa:nome, data:'', hora:'', prioridade:'media', tipo:'plano', incluir:true, salvo:false });
     desenharPlano();
     const ins = $('rqPlano').querySelectorAll('input[data-ac="titulo"]'); ins[ins.length-1].focus();
   };
@@ -390,7 +440,8 @@
   $('rqSalvar').onclick = () => {
     const novas = PLANO.filter(a => a.incluir && !a.salvo && a.titulo.trim());
     novas.forEach(a => {
-      DB.itens.push({ id:uid(), titulo:a.titulo.trim(), tipo:a.tipo, data:a.data || '', hora:a.hora || '', prioridade:a.prioridade,
+      const novoId = uid(); a.itemId = novoId;
+      DB.itens.push({ id:novoId, titulo:a.titulo.trim(), tipo:a.tipo, data:a.data || '', hora:a.hora || '', prioridade:a.prioridade,
         pessoa: norm(a.pessoa) === norm(nome) ? '' : a.pessoa.trim(), notas:'Da reunião: ' + R.titulo + (R.data ? ' (' + ddmm(R.data) + ')' : ''),
         rec:'', sub:[], paiId:'', origem:R.id, feito:false, feitoEm:'', criadoEm:new Date().toISOString() });
       a.salvo = true; a.incluir = false;
@@ -1136,7 +1187,7 @@
   };
   function ordemEncontro(id){ const s = serieDe(R); const i = s.findIndex(r => r.id === id); return (i < 0 ? 1 : i + 1) + 'º encontro'; }
   function ehNovoPauta(x){ const s = serieDe(R); return !!x.enc && x.enc === R.id && s.length > 1 && s[0].id !== R.id; }
-  function rotPauta(x){ return x.t + (ehNovoPauta(x) ? ' (novo neste encontro)' : ''); }
+  function rotPauta(x){ return x.t + (x.resp ? ' — ' + x.resp : '') + (ehNovoPauta(x) ? ' (novo neste encontro)' : ''); }
   const desenharPautaBase = desenharPauta;
   desenharPauta = function(){
     desenharPautaBase();
@@ -1144,6 +1195,7 @@
     $('rqPautaLeg').hidden = !n;
     if(n) $('rqPautaN').textContent += ' · ' + n + (n === 1 ? ' novo' : ' novos');
   };
+  window.SG_reu = { atual: () => R, desenharPauta: () => desenharPauta(), gerar: () => gerarResumo(), salvarDepois: () => salvarDepois(), abrir: it => abrirReuniao(it) };
 
   /* ---------- Secretária: fale ou escreva e ela coloca na agenda ---------- */
   const cssS = document.createElement('style');
