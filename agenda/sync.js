@@ -56,7 +56,7 @@
   function guardarBase(txt, em){ base = JSON.parse(txt); baseEm = em; try{ localStorage.setItem(KBASE, txt); localStorage.setItem(KEM, String(em)); }catch(_){} }
   const ocupado = () => !!document.querySelector('dialog[open]') || (document.activeElement && /TEXTAREA|INPUT/.test(document.activeElement.tagName) && document.activeElement.value);
 
-  function aplicar(novo){ DB = novo; salvarLocal(); try{ render(); }catch(_){} }
+  function aplicar(novo){ DB = novo; if(window.SG_manterAberta) SG_manterAberta(); salvarLocal(); try{ render(); }catch(_){} }
 
   let enviando = false, deNovo = false, tEnvio = null, pausado = false;
   async function enviar(){
