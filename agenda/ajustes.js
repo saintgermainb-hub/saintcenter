@@ -3,7 +3,7 @@
    - Pauta: responsável em cada tópico e botão "Vincular" que leva o tópico para
      plano de ação, tarefa, pauta de outra reunião ou projeto (novo ou existente).
    - "Limpar pauta" e "Zerar reunião" (guardam uma cópia antes de apagar).
-   Carregar por último:  <script src="ajustes.js?v=2"></script>                    */
+   Carregar por último:  <script src="ajustes.js?v=3"></script>                    */
 (function(){
 if(window.__sgAjustes) return; window.__sgAjustes = 1;
 
@@ -284,6 +284,58 @@ if(bZ) bZ.onclick = () => {
     avisar('Reunião zerada. As ações que já estavam na agenda continuam lá.');
   });
 };
+
+/* ---------- Plano de ação · acompanhamento: excluir uma ação ou limpar todas ---------- */
+const cssA = document.createElement('style');
+cssA.textContent = `
+  #rqAcomp .acp{grid-template-columns:auto minmax(0,1fr) auto !important}
+  #rqAcomp .acp-del{font-size:9px;letter-spacing:.14em;text-transform:uppercase;border:1px solid #eee;border-radius:999px;background:#fff;color:#8a7d86;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  #rqAcomp .acp-del:hover{color:#c2187a;border-color:#f2c6dd}
+  #rqAcomp .acp-del.conf{background:#c2187a;border-color:#c2187a;color:#fff}
+`;
+document.head.appendChild(cssA);
+function excluirAcoes(ids, r){
+  const set = new Set(ids); if(!set.size) return;
+  try{ localStorage.setItem(CHAVE + ':copia-antes-de-excluir-acoes:' + Date.now(), JSON.stringify(DB.itens.filter(i => set.has(i.id)))); }catch(_){}
+  DB.itens = DB.itens.filter(i => !set.has(i.id));
+  DB.itens.forEach(i => {
+    if(Array.isArray(i.plano)) i.plano = i.plano.filter(a => !set.has(a.itemId));
+    (i.pauta || []).forEach(x => { if(set.has(x.planoId)) delete x.planoId; if(set.has(x.tarefaId)) delete x.tarefaId; });
+  });
+  try{ salvar(); }catch(_){}
+  dlg.close();
+  try{ render(); }catch(_){}
+  setTimeout(() => { if(API().abrir) API().abrir(r); else if(window.SG_verItem) SG_verItem(r.id); setTimeout(() => { const a = $('rqAcomp'); if(a && !a.hidden) a.scrollIntoView({ block:'center' }); }, 120); }, 30);
+}
+function marcarAcomp(){
+  const lista = $('rqAcompLista'); if(!lista) return;
+  lista.querySelectorAll('.acp').forEach(l => {
+    if(l.querySelector('.acp-del')) return;
+    const b = l.querySelector('[data-acp]'); if(!b) return;
+    l.insertAdjacentHTML('beforeend', `<button type="button" class="acp-del" data-acpdel="${esc(b.dataset.acp)}" title="Apagar esta ação da agenda">Excluir</button>`);
+  });
+  const n = $('rqAcompN');
+  if(n && !$('rqAcompLimpar')) n.insertAdjacentHTML('afterend', '<button type="button" class="mini-perigo" id="rqAcompLimpar" title="Apagar da agenda todas as ações desta lista">limpar todas</button>');
+}
+if($('rqAcompLista')){
+  new MutationObserver(marcarAcomp).observe($('rqAcompLista'), { childList:true });
+  marcarAcomp();
+  $('rqAcomp').addEventListener('click', e => {
+    const r = reu(); if(!r || travada()) return;
+    const d = e.target.closest('[data-acpdel]');
+    if(d){
+      e.stopPropagation();
+      confirmar2(d, 'Confirmar', 'Excluir', () => { excluirAcoes([d.dataset.acpdel], r); avisar('Ação excluída da agenda.'); });
+      return;
+    }
+    const t = e.target.closest('#rqAcompLimpar');
+    if(t){
+      const ids = [...$('rqAcompLista').querySelectorAll('[data-acp]')].map(b => b.dataset.acp);
+      if(!ids.length) return;
+      confirmar2(t, 'confirmar: apagar ' + ids.length + ' ações da agenda', 'limpar todas', () => { excluirAcoes(ids, r); avisar(ids.length + ' ações excluídas da agenda.'); });
+    }
+  });
+}
 
 if(dlg.open){ encherPessoas(); decorar(); }
 })();
