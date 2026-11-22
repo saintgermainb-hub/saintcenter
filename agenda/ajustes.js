@@ -3,7 +3,7 @@
    - Pauta: responsável em cada tópico e botão "Vincular" que leva o tópico para
      plano de ação, tarefa, pauta de outra reunião ou projeto (novo ou existente).
    - "Limpar pauta" e "Zerar reunião" (guardam uma cópia antes de apagar).
-   Carregar por último:  <script src="ajustes.js?v=3"></script>                    */
+   Carregar por último:  <script src="ajustes.js?v=4"></script>                    */
 (function(){
 if(window.__sgAjustes) return; window.__sgAjustes = 1;
 
@@ -336,6 +336,44 @@ if($('rqAcompLista')){
     }
   });
 }
+
+/* ---------- Tipos (Todos, Tarefa, Reunião…) no menu lateral, embaixo de Tarefas ---------- */
+const cssT = document.createElement('style');
+cssT.textContent = `
+  .hd-tipos{display:none}
+  html.layout-head:not(.modo-app) .hd-side .hd-tipos{display:grid;gap:1px;margin:2px 0 8px 14px;padding-left:10px;border-left:1px solid rgba(246,236,236,.18)}
+  .hd-tipos button{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;border-radius:10px;padding:7px 10px;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(246,236,236,.78);background:none;border:0;cursor:pointer}
+  .hd-tipos button:hover{background:rgba(246,236,236,.07);color:#f6ecec}
+  .hd-tipos button[aria-pressed="true"]{background:rgba(246,236,236,.14);color:#fff}
+  .hd-tipos button small{font-size:9px;letter-spacing:0;opacity:.7}
+  @media (min-width:981px){ html.layout-head:not(.modo-app) #pillsTipo{display:none} }
+  @media (max-width:980px){ html.layout-head .hd-side .hd-tipos{display:none !important} }
+`;
+document.head.appendChild(cssT);
+function desenharTipos(){
+  const bTar = document.querySelector('nav.abas [data-aba="lista"]'); if(!bTar) return;
+  let box = document.getElementById('hdTipos');
+  if(!box){ box = document.createElement('div'); box.className = 'hd-tipos'; box.id = 'hdTipos'; bTar.after(box); }
+  const tipos = [['', 'Todos']].concat(Object.entries(typeof TIPO_CURTO === 'object' ? TIPO_CURTO : {}));
+  const abertos = (DB.itens || []).filter(i => !i.feito);
+  const naLista = typeof ABA !== 'undefined' && ABA === 'lista';
+  const atual = typeof FILTRO_TIPO !== 'undefined' ? FILTRO_TIPO : '';
+  box.innerHTML = tipos.map(([k, v]) => {
+    const n = k ? abertos.filter(i => i.tipo === k).length : abertos.length;
+    return `<button type="button" data-hdtipo="${esc(k)}" aria-pressed="${naLista && atual === k}"><span>${esc(v)}</span><small>${n || ''}</small></button>`;
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-hdtipo]'); if(!b) return;
+  try{ FILTRO_TIPO = b.dataset.hdtipo; }catch(_){}
+  try{ irAba('lista'); }catch(_){ const t = document.querySelector('nav.abas [data-aba="lista"]'); if(t) t.click(); }
+  try{ renderLista(); }catch(_){}
+  desenharTipos();
+});
+// o filtro de cima (quando aparece) e a troca de aba também atualizam o menu
+document.addEventListener('click', e => { if(e.target.closest('[data-ftipo], nav.abas [data-aba]')) setTimeout(desenharTipos, 0); });
+try{ const renderTiposAnt = render; render = function(){ const r = renderTiposAnt.apply(this, arguments); desenharTipos(); return r; }; }catch(_){}
+desenharTipos();
 
 if(dlg.open){ encherPessoas(); decorar(); }
 })();
