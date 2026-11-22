@@ -1,17 +1,19 @@
 /* Agenda Coordenação · ajustes (21/11)
-   - Sem laço: a marca do laço sai de todas as telas.
+   - Menu lateral: sem o laço grande em cima do nome; nome e setor com espaço entre eles.
    - Pauta: responsável em cada tópico e botão "Vincular" que leva o tópico para
      plano de ação, tarefa, pauta de outra reunião ou projeto (novo ou existente).
    - "Limpar pauta" e "Zerar reunião" (guardam uma cópia antes de apagar).
-   Carregar por último:  <script src="ajustes.js?v=1"></script>                    */
+   Carregar por último:  <script src="ajustes.js?v=2"></script>                    */
 (function(){
 if(window.__sgAjustes) return; window.__sgAjustes = 1;
 
-/* ---------- sem laço ---------- */
+/* ---------- menu lateral: sem o laço grande em cima do nome; nome e setor com respiro ---------- */
 const cssL = document.createElement('style');
 cssL.textContent = `
-  svg.laco, img.laco, img.laco-img, img.laco-fita, .hd-perfil > img, .sec-bt > img{display:none !important}
-  h1.tit{padding-right:0 !important}
+  .hd-perfil > img{display:none !important}
+  .hd-perfil{padding-top:6px}
+  .hd-perfil .n{margin-top:0 !important;line-height:1.2}
+  .hd-perfil .c{margin-top:8px;line-height:1.7}
 `;
 document.head.appendChild(cssL);
 
