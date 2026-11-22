@@ -409,7 +409,10 @@ const TIPOS = {
 };
 const TIPO_CURTO = { tarefa:'Tarefa', reuniao:'Reunião', compromisso:'Compromisso', objetivo:'Objetivo', plano:'Plano de ação' };
 let DB = { itens:[], entradas:[], v:1 };
-function carregar(){ try{ const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if(d && Array.isArray(d.itens)) DB = Object.assign({entradas:[]}, d); }catch(_){} }
+function carregar(){ try{ const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if(d && Array.isArray(d.itens)) DB = Object.assign({entradas:[]}, d); }catch(_){} manterAberta(); }
+// reunião aberta na tela: o que está sendo editado continua valendo quando a agenda é recarregada ou sincronizada
+function manterAberta(){ try{ const dlg = document.getElementById('dlgReuniao'), a = window.SG_reuAtual; if(!dlg || !dlg.open || !a) return; const i = DB.itens.findIndex(x => x.id === a.id); if(i >= 0) DB.itens[i] = a; else DB.itens.push(a); }catch(_){} }
+window.SG_manterAberta = manterAberta;
 function salvar(){ try{ localStorage.setItem(CHAVE, JSON.stringify(DB)); }catch(e){ toast('Não consegui salvar neste navegador.'); } }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
@@ -978,7 +981,7 @@ if(LIBERADO){
   window.addEventListener('storage', ev => { if(ev.key === CHAVE){ carregar(); render(); } });
 }
 </script>
-<script src="extras.js?v=18"></script>
+<script src="extras.js?v=19"></script>
 <script src="secretaria-conversa.js?v=3"></script>
 <script src="lacos.js?v=1"></script>
 <script src="tema.js?v=2"></script>
@@ -986,8 +989,9 @@ if(LIBERADO){
 <script src="visual.js?v=5"></script>
 <script src="datas.js?v=3"></script>
 <script src="secretaria-ia.js?v=5"></script>
-<script src="sync.js?v=2"></script>
+<script src="sync.js?v=3"></script>
 <script src="concluir.js?v=1"></script>
+<script src="ajustes.js?v=1"></script>
 <script>
 /* atualiza sozinha quando sai uma versão nova (aba ou aplicativo aberto há muito tempo) */
 (function(){
