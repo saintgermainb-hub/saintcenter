@@ -3,7 +3,7 @@
    - Pauta: responsável em cada tópico e botão "Vincular" que leva o tópico para
      plano de ação, tarefa, pauta de outra reunião ou projeto (novo ou existente).
    - "Limpar pauta" e "Zerar reunião" (guardam uma cópia antes de apagar).
-   Carregar por último:  <script src="ajustes.js?v=4"></script>                    */
+   Carregar por último:  <script src="ajustes.js?v=5"></script>                    */
 (function(){
 if(window.__sgAjustes) return; window.__sgAjustes = 1;
 
@@ -346,7 +346,7 @@ cssT.textContent = `
   .hd-tipos button:hover{background:rgba(246,236,236,.07);color:#f6ecec}
   .hd-tipos button[aria-pressed="true"]{background:rgba(246,236,236,.14);color:#fff}
   .hd-tipos button small{font-size:9px;letter-spacing:0;opacity:.7}
-  @media (min-width:981px){ html.layout-head:not(.modo-app) #pillsTipo{display:none} }
+  @media (min-width:981px){ html.layout-head:not(.modo-app) #pillsTipo{display:none} html.layout-head:not(.modo-app) .hd-side nav.abas [data-aba="lista"] .n{display:none} }
   @media (max-width:980px){ html.layout-head .hd-side .hd-tipos{display:none !important} }
 `;
 document.head.appendChild(cssT);
@@ -354,7 +354,10 @@ function desenharTipos(){
   const bTar = document.querySelector('nav.abas [data-aba="lista"]'); if(!bTar) return;
   let box = document.getElementById('hdTipos');
   if(!box){ box = document.createElement('div'); box.className = 'hd-tipos'; box.id = 'hdTipos'; bTar.after(box); }
-  const tipos = [['', 'Todos']].concat(Object.entries(typeof TIPO_CURTO === 'object' ? TIPO_CURTO : {}));
+  // o item do menu deixa de se chamar "Tarefas" (Tarefa é só um dos tipos)
+  const tn = [...bTar.childNodes].find(n => n.nodeType === 3 && n.textContent.trim()); if(tn && tn.textContent.trim() !== 'Lista') tn.textContent = 'Lista ';
+  const PLURAL = { tarefa:'Tarefas', reuniao:'Reuniões', alinhamento:'Alinhamentos', projeto:'Projetos', compromisso:'Compromissos', objetivo:'Objetivos', plano:'Planos de ação' };
+  const tipos = [['', 'Todos']].concat(Object.entries(typeof TIPO_CURTO === 'object' ? TIPO_CURTO : {}).map(([k, v]) => [k, PLURAL[k] || v]));
   const abertos = (DB.itens || []).filter(i => !i.feito);
   const naLista = typeof ABA !== 'undefined' && ABA === 'lista';
   const atual = typeof FILTRO_TIPO !== 'undefined' ? FILTRO_TIPO : '';
