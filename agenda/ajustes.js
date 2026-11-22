@@ -3,7 +3,7 @@
    - Pauta: responsável em cada tópico e botão "Vincular" que leva o tópico para
      plano de ação, tarefa, pauta de outra reunião ou projeto (novo ou existente).
    - "Limpar pauta" e "Zerar reunião" (guardam uma cópia antes de apagar).
-   Carregar por último:  <script src="ajustes.js?v=5"></script>                    */
+   Carregar por último:  <script src="ajustes.js?v=6"></script>                    */
 (function(){
 if(window.__sgAjustes) return; window.__sgAjustes = 1;
 
@@ -350,6 +350,19 @@ cssT.textContent = `
   @media (max-width:980px){ html.layout-head .hd-side .hd-tipos{display:none !important} }
 `;
 document.head.appendChild(cssT);
+// ordem fixa do menu: Painel, Calendário, Lista (com os tipos), Objetivos, Projetos e depois o resto
+function ordenarMenu(bTar, box){
+  const nav = bTar.parentElement; if(!nav) return;
+  const ob = nav.querySelector('[data-aba="objetivos"]');
+  if(ob){ const t = [...ob.childNodes].find(n => n.nodeType === 3 && n.textContent.trim()); if(t && t.textContent.trim() !== 'Objetivos') t.textContent = 'Objetivos'; }
+  const ordem = ['painel', 'calendario', 'lista', 'objetivos', 'projetos'];
+  const lista = ordem.map(a => nav.querySelector(`:scope > [data-aba="${a}"]`)).filter(Boolean);
+  const resto = [...nav.children].filter(el => !lista.includes(el) && el !== box);
+  let atual = [...nav.children].filter(el => el !== box);
+  const quer = lista.concat(resto);
+  if(quer.some((el, i) => atual[i] !== el)) quer.forEach(el => nav.appendChild(el));
+  if(box.previousElementSibling !== bTar) bTar.after(box);
+}
 function desenharTipos(){
   const bTar = document.querySelector('nav.abas [data-aba="lista"]'); if(!bTar) return;
   let box = document.getElementById('hdTipos');
@@ -357,7 +370,9 @@ function desenharTipos(){
   // o item do menu deixa de se chamar "Tarefas" (Tarefa é só um dos tipos)
   const tn = [...bTar.childNodes].find(n => n.nodeType === 3 && n.textContent.trim()); if(tn && tn.textContent.trim() !== 'Lista') tn.textContent = 'Lista ';
   const PLURAL = { tarefa:'Tarefas', reuniao:'Reuniões', alinhamento:'Alinhamentos', projeto:'Projetos', compromisso:'Compromissos', objetivo:'Objetivos', plano:'Planos de ação' };
-  const tipos = [['', 'Todos']].concat(Object.entries(typeof TIPO_CURTO === 'object' ? TIPO_CURTO : {}).map(([k, v]) => [k, PLURAL[k] || v]));
+  // Projetos e Objetivos já têm item próprio no menu: não repetem aqui
+  const tipos = [['', 'Todos']].concat(Object.entries(typeof TIPO_CURTO === 'object' ? TIPO_CURTO : {}).filter(([k]) => k !== 'projeto' && k !== 'objetivo').map(([k, v]) => [k, PLURAL[k] || v]));
+  ordenarMenu(bTar, box);
   const abertos = (DB.itens || []).filter(i => !i.feito);
   const naLista = typeof ABA !== 'undefined' && ABA === 'lista';
   const atual = typeof FILTRO_TIPO !== 'undefined' ? FILTRO_TIPO : '';
