@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Radar de concorrentes · Saint Germain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+<style>
+/* VOICE: painel de trabalho, direto, a diferença em primeiro lugar
+   IDEA: um placar lado a lado, como o comparador do Reclame Aqui, mais o diário da jornada do cliente
+   PICTURE: o placar das notas com a distância entre as empresas, e a linha das notas ao longo dos dias
+   COLOUR and TYPE: marrom Saint Germain, rosa da agenda, grafite para o concorrente; Questrial
+   LAYOUT: placar no topo, tabela comparativa, gráfico, matriz da jornada e registros */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#16110f);--soft:light-dark(#faf6f3,#211915);--card:light-dark(#fff,#1e1714);--ink:light-dark(#1d1410,#f4ebe5);--mut:light-dark(#76655c,#b8a69b);--line:light-dark(#eee2da,#3a2c25);--sg:light-dark(#77503f,#d9a58c);--sgbg:light-dark(#f6ece6,#2e211b);--rosa:light-dark(#c2185b,#ff8cc6);--rosabg:light-dark(#fde8f2,#3a1d2b);--c1:light-dark(#3d4a55,#a9bccb);--c2:light-dark(#4f7a5a,#9fd0ab);--c3:light-dark(#7a5c99,#c8a9ec);--c4:light-dark(#2f7f86,#8fd3d9);--c5:light-dark(#b0623a,#f0a982);--bom:light-dark(#2e7d4f,#8fd9ab);--ruim:light-dark(#b3261e,#ff9a92)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Questrial,"Helvetica Neue",Arial,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--rosa);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 20px 40px}
+.topo{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px;margin-bottom:22px}
+.marca{font-size:12px;color:var(--mut)}
+h1{font-weight:400;font-size:clamp(17px,2vw,21px);line-height:1.25;margin:4px 0 4px;text-wrap:balance;max-width:820px}
+.sub{color:var(--mut);font-size:14px}
+.btn{min-height:36px;padding:0 14px;font-size:13px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+.btn.pri{background:var(--sg);border-color:var(--sg);color:light-dark(#fff,#16110f)}
+.btn.min{min-height:38px;padding:0 14px;font-size:14px}
+.placar{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:20px}
+.emp{position:relative;border-radius:12px;padding:10px 12px 9px;background:var(--soft);border:1px solid var(--line);overflow:hidden}
+.emp.nossa{background:var(--sgbg);border-color:light-dark(#e6cfc2,#4a3328)}
+.emp .nm{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:8px}
+.emp .nm i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.emp .nota{font-size:clamp(22px,2.6vw,28px);line-height:1;margin:4px 0 3px;letter-spacing:-.01em}
+.emp .nota small{font-size:12px;color:var(--mut);letter-spacing:0}
+.rep{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.delta{font-size:14px;margin-left:8px}
+.delta.up{color:var(--bom)}.delta.down{color:var(--ruim)}
+.emp .linha{display:flex;flex-wrap:wrap;gap:1px 10px;margin-top:6px;font-size:11px;color:var(--mut)}
+.emp .linha b{font-weight:400;color:var(--ink)}
+.gap{display:grid;place-items:center;text-align:center;border-radius:16px;padding:12px;border:1px dashed var(--line)}
+.gap .v{font-size:22px;line-height:1}
+.gap .t{font-size:14px;color:var(--mut);margin-top:6px;max-width:220px}
+h2{font-weight:400;font-size:16px;margin:0 0 4px}
+.sec{margin-top:26px}
+.sec .cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:12px}
+.sec .cab p{margin:0;color:var(--mut);font-size:14px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-weight:400;color:var(--mut);font-size:13px}
+td.best{color:var(--bom)}
+td.best::after{content:" ●";font-size:9px;vertical-align:middle}
+.fig{position:relative;min-height:240px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;color:var(--mut);margin-top:10px}
+.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.hist{display:grid;gap:8px}
+.hist .r{display:grid;grid-template-columns:170px repeat(6,minmax(0,1fr));gap:6px;align-items:center;font-size:13px}
+.hist .r span:first-child{font-size:14px}
+.hist .m{text-align:center;padding:6px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.hist .m.ra1000,.hist .m.otima{background:light-dark(#e5f3ea,#1d3326);border-color:transparent}
+.hist .m.boa{background:light-dark(#eef6e4,#26301b);border-color:transparent}
+.hist .m.regular{background:light-dark(#fff3dc,#3a2e17);border-color:transparent}
+.hist .m.ruim,.hist .m.nao-recomendada{background:light-dark(#fde4e1,#3d1d1a);border-color:transparent}
+.hist .m small{display:block;color:var(--mut);font-size:11px}
+.matriz td{text-align:center}
+.matriz td:first-child{text-align:left}
+.cel{min-width:96px;border:0;background:none;border-radius:10px;padding:6px 8px;width:100%}
+.cel:hover{background:var(--soft)}
+.cel b{font-weight:400;font-size:18px;display:block}
+.cel small{color:var(--mut);font-size:12px}
+.estrelas{letter-spacing:2px;color:var(--rosa)}
+.form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:18px;border-radius:18px;background:var(--soft);border:1px solid var(--line);margin-bottom:14px}
+.form label{display:grid;gap:4px;font-size:13px;color:var(--mut)}
+.form .full{grid-column:1/-1}
+.form input,.form select,.form textarea{min-height:44px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--card);font-size:16px;color:var(--ink)}
+.form textarea{min-height:90px;resize:vertical}
+.notas{display:flex;gap:6px}
+.notas button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+.notas button[aria-pressed=true]{background:var(--rosa);border-color:var(--rosa);color:#fff}
+.reg{border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:10px;background:var(--card)}
+.reg .t{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--mut)}
+.reg .t b{font-weight:400;color:var(--ink);font-size:15px}
+.reg p{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.reg .x{margin-left:auto;border:0;background:none;color:var(--mut);min-height:32px}
+.filtro{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pill{min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:13px}
+.pill[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.vazio{padding:26px;border:1px dashed var(--line);border-radius:16px;text-align:center;color:var(--mut)}
+.aviso{font-size:13px;color:var(--mut);margin:8px 0 0}
+details{margin-top:12px;border:1px solid var(--line);border-radius:16px;padding:12px 16px;background:var(--card)}
+summary{cursor:pointer;min-height:32px}
+.barras{display:grid;gap:8px;margin-top:16px}
+.barra{display:grid;grid-template-columns:120px minmax(0,1fr) 64px;gap:8px;align-items:center;font-size:13px}
+.barra .tr{height:16px;border-radius:6px;background:var(--soft);overflow:hidden}
+.barra .tr i{display:block;height:100%;border-radius:6px}
+.barra b{font-weight:400;text-align:right}
+.destaque{padding:12px 14px;border-radius:12px;background:var(--sgbg);border:1px solid light-dark(#e6cfc2,#4a3328);font-size:14px;margin-bottom:14px}
+.fbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 0;margin:-6px 0 18px;background:var(--bg);border-bottom:1px solid var(--line)}
+.fbar>span{font-size:13px;color:var(--mut);margin-right:4px}
+.fbar .pill i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+a.lk{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+a.lk:hover{text-decoration-color:currentColor}
+a.lk::after{content:" ↗";font-size:.75em;color:var(--mut)}
+td.txt{white-space:normal;text-align:left;font-size:13px;min-width:130px;max-width:240px;vertical-align:top}
+td.txt small{display:block;color:var(--mut);font-size:12px;line-height:1.35;margin-top:3px}
+.si{font-size:13px;padding:2px 10px;border-radius:999px;display:inline-block}
+.si.sim{background:light-dark(#e5f3ea,#1d3326);color:var(--bom)}
+.si.parcial{background:light-dark(#fff3dc,#3a2e17);color:light-dark(#8a5a00,#f1c56b)}
+.si.nao{background:light-dark(#fde4e1,#3d1d1a);color:var(--ruim)}
+.si.nd{background:var(--soft);color:var(--mut)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+@media(max-width:760px){.form{grid-template-columns:1fr 1fr}.hist .r{grid-template-columns:repeat(3,minmax(0,1fr))}.hist .r span:first-child{grid-column:1/-1}}
+@media(max-width:600px){table{font-size:13px}th,td{padding:9px 8px}.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header class="topo">
+  <div>
+   <div class="marca">Saint Germain · Radar de concorrentes</div>
+   <h1 id="titulo">Carregando o placar…</h1>
+   <div class="sub" id="atual">Nota do Reclame Aqui atualizada todo dia, com a jornada do cliente lado a lado.</div>
+  </div>
+  <button class="btn" id="bEmp">Empresas acompanhadas</button>
+ </header>
+
+ <nav class="fbar" id="fbar" aria-label="Filtrar empresas"></nav>
+
+ <section class="placar" id="placar"></section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Comparativo no Reclame Aqui</h2><p id="periodo">Últimos 6 meses</p></div></div>
+  <div class="scroll"><table id="comp"></table></div>
+  <p class="aviso">● marca quem está melhor em cada indicador.</p>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Atendimento</h2><p id="atTit">Canais oferecidos no site de cada empresa.</p></div></div>
+  <div class="scroll"><table id="atend"></table></div>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Trocas e devoluções</h2><p>Prazos contados a partir do recebimento, conforme a política publicada no site.</p></div></div>
+  <div class="scroll"><table id="trocas"></table></div>
+  <p class="aviso">● marca o prazo mais longo para o cliente.</p>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Redes sociais e marketplaces</h2><p>Seguidores e se a marca tem loja própria em cada plataforma.</p></div></div>
+  <div class="scroll"><table id="redes"></table></div>
+  <h2 style="font-size:18px;margin-top:22px">Seguidores no Instagram</h2>
+  <div class="barras" id="igBar"></div>
+  <p class="aviso" id="redesAviso"></p>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Comparação proporcional</h2><p>Reclamações e avaliações pesadas pelo tamanho (faturamento) e pela idade de cada empresa.</p></div></div>
+  <div class="destaque" id="propTit">Carregando…</div>
+  <div class="scroll"><table id="prop"></table></div>
+  <h2 style="font-size:18px;margin-top:22px">Reclamações a cada R$ 1 milhão faturado</h2>
+  <div class="barras" id="propBar"></div>
+  <p class="aviso">Reclamações e avaliações dos últimos 6 meses multiplicadas por 2 para virar um ano, divididas pelo faturamento anual informado em “Empresas acompanhadas”. Onde não há ano de fundação, uso o tempo no Reclame Aqui (marcado com *). ● marca o melhor resultado.</p>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Nota ao longo dos dias</h2><p>Cada atualização diária vira um ponto na linha.</p></div></div>
+  <div class="fig"><svg id="graf" role="img" aria-label="Evolução da nota no Reclame Aqui"></svg></div>
+  <div class="leg" id="leg"></div>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Reputação mês a mês</h2><p>Histórico do próprio Reclame Aqui.</p></div></div>
+  <div class="hist" id="hist"></div>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Jornada do cliente</h2><p>Sua análise de cada etapa, de 1 a 5, para comparar onde cada empresa ganha ou perde.</p></div></div>
+  <div class="scroll"><table class="matriz" id="matriz"></table></div>
+ </section>
+
+ <section class="sec">
+  <div class="cab"><div><h2>Registrar uma observação</h2><p>Ex.: comprei na Growth e o rastreio chegou por WhatsApp no mesmo dia.</p></div></div>
+  <form class="form" id="fJ">
+   <label>Empresa<select id="jEmp"></select></label>
+   <label>Etapa<select id="jEtapa"></select></label>
+   <label>Data<input type="date" id="jData"></label>
+   <label>Nota da etapa<span class="notas" id="jNotas"></span></label>
+   <label class="full">O que você observou<textarea id="jTexto" placeholder="O que aconteceu, quanto tempo levou, o que surpreendeu, o que podemos copiar ou evitar"></textarea></label>
+   <div class="full" style="display:flex;justify-content:flex-end"><button class="btn pri" type="submit">Salvar observação</button></div>
+  </form>
+  <div class="filtro" id="jFiltro"></div>
+  <div id="jLista"></div>
+ </section>
+
+ <details id="manual">
+  <summary>Lançar a nota manualmente</summary>
+  <p class="aviso">Use se a atualização automática falhar num dia. Os números ficam salvos com a data de hoje.</p>
+  <form class="form" id="fM" style="margin-top:10px">
+   <label>Empresa<select id="mEmp"></select></label>
+   <label>Nota (0 a 10)<input id="mNota" inputmode="decimal" placeholder="6,2"></label>
+   <label>Reputação<select id="mRep"><option>RA1000</option><option>Ótima</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Não recomendada</option><option>Sem índice</option></select></label>
+   <label>Resolvidas (%)<input id="mRes" inputmode="decimal"></label>
+   <label>Respondidas (%)<input id="mResp" inputmode="decimal"></label>
+   <label>Voltariam (%)<input id="mVolt" inputmode="decimal"></label>
+   <label>Nota do consumidor<input id="mCons" inputmode="decimal"></label>
+   <label>Tempo de resposta<input id="mTempo" placeholder="1 dia e 8 horas"></label>
+   <div class="full" style="display:flex;justify-content:flex-end"><button class="btn pri" type="submit">Salvar nota de hoje</button></div>
+  </form>
+ </details>
+
+ <details id="dEmp">
+  <summary>Empresas acompanhadas</summary>
+  <div id="empLista" style="margin-top:10px"></div>
+  <form class="form" id="fE" style="margin-top:10px">
+   <label class="full">Nova empresa: nome<input id="eNome" placeholder="Ex.: Technos"></label>
+   <label class="full">Link da página da empresa no Reclame Aqui<input id="eLink" placeholder="https://www.reclameaqui.com.br/empresa/…/"></label>
+   <div class="full" style="display:flex;justify-content:flex-end"><button class="btn" type="submit">Adicionar ao radar</button></div>
+  </form>
+ </details>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ETAPAS=['Descoberta e site','Atendimento pré-venda','Compra e pagamento','Confirmação e comunicação','Prazo e entrega','Embalagem e produto','Pós-venda e suporte','Troca e devolução','Reclame Aqui e redes'];
+const CORES=['var(--sg)','var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--rosa)'];
+const anoAtual=new Date().getFullYear();
+const fatTxt=e=>e.faturamento?esc(e.faturamento)+(e.faturamentoAno?' <small style="color:var(--mut)">('+esc(e.faturamentoAno)+')</small>':''):'—';
+const n1=v=>v==null||v===''||isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const pct=v=>v==null||v===''||isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+const int=v=>v==null||v===''||isNaN(v)?'—':Number(v).toLocaleString('pt-BR');
+const num=s=>{if(s==null||s==='')return null;let t=String(s).replace('%','').trim();if(t.includes(','))t=t.replace(/\./g,'').replace(',','.');const v=parseFloat(t);return isNaN(v)?null:v};
+const dmy=s=>s?s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4):'';
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const horas=t=>{if(!t)return null;const d=/(\d+)\s*dia/.exec(t),h=/(\d+)\s*hora/.exec(t);if(!d&&!h)return null;return (d?+d[1]*24:0)+(h?+h[1]:0)};
+const slugRep=r=>String(r||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,'-');
+const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600)};
+
+let db=null,EMP=[],SNAP=[],JOR=[],FJ='',notaSel=0;
+let FILTRO='';try{FILTRO=localStorage.getItem('radarFiltro')||''}catch(_){}
+
+function todas(){const nt=e=>{const s=ultimo(e.id);return s&&s.nota!=null?s.nota:-1};return EMP.slice().sort((a,b)=>(b.nossa?1:0)-(a.nossa?1:0)||nt(b)-nt(a)||(a.ordem||9)-(b.ordem||9)||String(a.nome).localeCompare(b.nome))}
+function emps(){const t=todas();if(FILTRO&&t.some(e=>e.id===FILTRO&&!e.nossa))return t.filter(e=>e.nossa||e.id===FILTRO);return t}
+function snapsDe(id){return SNAP.filter(s=>s.empresa===id).sort((a,b)=>a.data.localeCompare(b.data))}
+function ultimo(id){const l=snapsDe(id);return l[l.length-1]||null}
+function anterior(id){const l=snapsDe(id);return l.length>1?l[l.length-2]:null}
+const cor=e=>{if(e.nossa)return CORES[0];const o=EMP.filter(x=>!x.nossa).sort((x,y)=>(x.ordem||9)-(y.ordem||9)||String(x.nome).localeCompare(y.nome));const i=o.findIndex(x=>x.id===e.id);return CORES[1+(Math.max(i,0)%6)]};
+const url=u=>/^https?:\/\//i.test(String(u||''))?String(u):'';
+const nomeLk=e=>url(e.site)?`<a class="lk" href="${esc(url(e.site))}" target="_blank" rel="noopener">${esc(e.nome)}</a>`:esc(e.nome);
+const lk=(u,t)=>url(u)?`<a class="lk" href="${esc(url(u))}" target="_blank" rel="noopener">${esc(t)}</a>`:esc(t);
+const segTxt=v=>v==null||v===''||isNaN(v)?'—':v>=1e6?(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi':v>=1e3?(v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil':int(v);
+const SI={sim:['sim','Tem'],parcial:['parcial','Em parte'],nao:['nao','Não tem']};
+const simNao=v=>{const k=/^sim/i.test(v||'')?'sim':/parte|parcial/i.test(v||'')?'parcial':/^n[ãa]o/i.test(v||'')?'nao':'nd';return `<span class="si ${k}">${esc(v||'sem dado')}</span>`};
+
+function filtroUI(){
+  const t=todas(),outros=t.filter(e=>!e.nossa);
+  if(FILTRO&&!outros.some(e=>e.id===FILTRO))FILTRO='';
+  $('fbar').innerHTML=outros.length?`<span>Comparar a Saint Germain com</span><button class="pill" data-fl="" aria-pressed="${!FILTRO}">Todas</button>`+outros.map(e=>`<button class="pill" data-fl="${esc(e.id)}" aria-pressed="${FILTRO===e.id}"><i style="background:${cor(e)}"></i>${esc(e.nome)}</button>`).join(''):'';
+}
+$('fbar').onclick=e=>{const b=e.target.closest('[data-fl]');if(!b)return;FILTRO=b.dataset.fl;try{localStorage.setItem('radarFiltro',FILTRO)}catch(_){}render()};
+
+function render(){
+  filtroUI();
+  const es=emps();
+  const nossa=es.find(e=>e.nossa),outros=es.filter(e=>!e.nossa);
+  const un=nossa&&ultimo(nossa.id);
+  /* título com a conclusão */
+  if(un&&outros.length){
+    const melhor=outros.map(e=>({e,s:ultimo(e.id)})).filter(x=>x.s&&x.s.nota!=null).sort((a,b)=>b.s.nota-a.s.nota)[0];
+    if(melhor){const d=un.nota-melhor.s.nota;
+      const comNota=es.map(e=>ultimo(e.id)).filter(s=>s&&s.nota!=null).sort((a,b)=>b.nota-a.nota);
+      const pos=comNota.findIndex(s=>s.empresa===nossa.id)+1;
+      const rk=comNota.length>2?`Saint Germain é a ${pos}ª de ${comNota.length} no Reclame Aqui`:'Saint Germain';
+      $('titulo').textContent=Math.abs(d)<0.05?`${rk}, empatada com ${melhor.e.nome}`:d<0?`${rk}, ${n1(-d)} ponto${-d>=1.95?'s':''} atrás da ${melhor.e.nome}`:`${rk}, ${n1(d)} ponto${d>=1.95?'s':''} à frente da ${melhor.e.nome}`}
+  } else $('titulo').textContent=es.length?'Radar de concorrentes':'Nenhuma empresa no radar ainda';
+  const ult=SNAP.map(s=>s.atualizadoEm||s.data).sort().pop();
+  $('atual').textContent=ult?'Atualizado em '+new Date(ult.length>10?ult:ult+'T12:00').toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:ult.length>10?'2-digit':undefined,minute:ult.length>10?'2-digit':undefined})+' · atualização automática todo dia de manhã':'Aguardando a primeira atualização.';
+
+  /* placar */
+  const cards=es.map((e,i)=>{const s=ultimo(e.id),a=anterior(e.id);const d=s&&a&&s.nota!=null&&a.nota!=null?s.nota-a.nota:null;
+    return `<div class="emp ${e.nossa?'nossa':''}"><div class="nm"><i style="background:${cor(e)}"></i>${nomeLk(e)}</div>
+    <div class="nota">${s?n1(s.nota):'—'}<small> /10</small></div>
+    <span class="rep">${esc(s&&s.reputacao||'sem dado')}</span>${d!=null&&Math.abs(d)>=0.05?`<span class="delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${n1(Math.abs(d))} desde ${dmy(a.data)}</span>`:d!=null?`<span class="delta">= desde ${dmy(a.data)}</span>`:''}
+    <div class="linha"><span>Resolve <b>${s?pct(s.resolvidas):'—'}</b></span><span>Voltariam <b>${s?pct(s.voltariam):'—'}</b></span><span>Resposta <b>${esc(s&&s.tempoResposta||'—')}</b></span></div></div>`});
+  if(un&&un.nota!=null&&outros.length===1){const s=ultimo(outros[0].id);if(s&&s.nota!=null){const d=un.nota-s.nota;
+    cards.splice(1,0,`<div class="gap"><div><div class="v" style="color:${d<0?'var(--ruim)':'var(--bom)'}">${d>0?'+':''}${n1(d)}</div><div class="t">${d<0?'pontos para alcançar a':'pontos de vantagem sobre a'} ${esc(outros[0].nome)}</div></div></div>`)}}
+  $('placar').innerHTML=cards.join('')||'<div class="vazio">Adicione empresas em “Empresas acompanhadas”.</div>';
+
+  /* tabela */
+  const ss=es.map(e=>ultimo(e.id)||{});
+  const linhas=[
+   ['Nota Reclame Aqui',s=>s.nota,n1,'max'],
+   ['Reputação',s=>s.reputacao,v=>esc(v||'—'),null],
+   ['Reclamações recebidas',s=>s.recebidas,int,null],
+   ['Respondidas',s=>s.respondidas,pct,'max'],
+   ['Aguardando resposta',s=>s.aguardando,int,'min'],
+   ['Resolvidas',s=>s.resolvidas,pct,'max'],
+   ['Voltariam a fazer negócio',s=>s.voltariam,pct,'max'],
+   ['Reclamações avaliadas',s=>s.avaliadas,int,null],
+   ['Nota média do consumidor',s=>s.notaConsumidor,v=>v==null?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:2}),'max'],
+   ['Tempo médio de resposta',s=>s.tempoHoras,(v,s)=>esc(s.tempoResposta||'—'),'min'],
+   ['Principal problema',s=>s.problema,v=>esc(v||'—'),null],
+   ['Total de reclamações no RA (todas)',s=>s.totalReclamacoes,int,null],
+   ['Tempo no Reclame Aqui',s=>s.anosRA,v=>esc(v||'—'),null]
+  ];
+  const linhasEmp=[
+   ['Anos de empresa',e=>e.fundacao?anoAtual-e.fundacao:null,(v,e)=>v==null?'—':v+(v===1?' ano':' anos')+' <small style="color:var(--mut)">(desde '+e.fundacao+')</small>'],
+   ['Faturamento',e=>e.faturamentoValor,(v,e)=>fatTxt(e)]
+  ];
+  $('comp').innerHTML=`<thead><tr><th>Indicador</th>${es.map(e=>`<th>${nomeLk(e)}</th>`).join('')}</tr></thead><tbody>`+linhas.map(([rot,get,fmt,best])=>{
+    const vals=ss.map(get);const ok=vals.filter(v=>typeof v==='number');
+    const alvo=best&&ok.length>1?(best==='max'?Math.max(...ok):Math.min(...ok)):null;
+    return `<tr><td>${rot}</td>${ss.map((s,i)=>`<td class="${alvo!=null&&vals[i]===alvo?'best':''}">${fmt(vals[i],s)}</td>`).join('')}</tr>`}).join('')
+   +`<tr><td colspan="${es.length+1}" style="padding-top:20px;color:var(--mut);font-size:13px;border-bottom:0">Sobre a empresa</td></tr>`
+   +linhasEmp.map(([rot,get,fmt])=>`<tr><td>${rot}</td>${es.map(e=>`<td>${fmt(get(e),e)}</td>`).join('')}</tr>`).join('')
+   +`<tr><td>Fonte do faturamento</td>${es.map(e=>`<td style="white-space:normal;font-size:12px;color:var(--mut);max-width:180px">${esc(e.faturamentoFonte||'—')}</td>`).join('')}</tr>`+'</tbody>';
+  const per=ss.map(s=>s.periodo).find(Boolean);$('periodo').textContent=per?'Dados do Reclame Aqui de '+per:'Últimos 6 meses';
+
+  /* histórico */
+  $('hist').innerHTML=es.map(e=>{const h=(e.historico||[]).slice(-6);return h.length?`<div class="r"><span>${nomeLk(e)}</span>${h.map(m=>`<div class="m ${slugRep(m.status)}">${esc(m.status)}<small>${esc(m.mes)}</small></div>`).join('')}</div>`:''}).join('')||'<div class="vazio">Sem histórico ainda.</div>';
+
+  atend(es);trocas(es);redes(es);prop(es);desenhar();matriz();lista();selects();empLista();
+}
+
+/* tabela genérica por empresa */
+function tabela(id,es,linhas){
+  $(id).innerHTML=`<thead><tr><th>Item</th>${es.map(e=>`<th style="text-align:left">${nomeLk(e)}</th>`).join('')}</tr></thead><tbody>`+linhas.map(([rot,get,fmt,best])=>{
+    const vals=es.map(get);const ok=vals.filter(v=>typeof v==='number'&&isFinite(v));
+    const alvo=best&&ok.length>1&&new Set(ok).size>1?(best==='max'?Math.max(...ok):Math.min(...ok)):null;
+    return `<tr><td>${rot}</td>${es.map((e,i)=>`<td class="txt ${alvo!=null&&vals[i]===alvo?'best':''}">${fmt(vals[i],e)}</td>`).join('')}</tr>`}).join('')+'</tbody>';
+}
+const semDado=e=>!e.levantadoEm;
+const canal=k=>(v,e)=>{const c=(e.canais||{})[k];if(!c)return '<span class="si nd">sem dado</span>';const m=SI[c.tem]||['nd','sem dado'];return `<span class="si ${m[0]}">${m[1]}</span><small>${esc(c.det||'')}</small>`};
+
+/* atendimento */
+function atend(es){
+  tabela('atend',es,[
+   ['WhatsApp',e=>null,canal('whatsapp')],
+   ['Telefone',e=>null,canal('telefone')],
+   ['E-mail',e=>null,canal('email')],
+   ['Chat no site',e=>null,canal('chat')],
+   ['Quantos canais de atendimento',e=>e.canais?Object.values(e.canais).filter(c=>c&&c.tem==='sim').length:null,v=>v==null?'—':String(v),'max'],
+   ['Fácil achar o contato no site?',e=>null,(v,e)=>simNao(e.contatoFacil)+`<small>${esc(e.contatoObs||'')}</small>`],
+   ['Página de contato',e=>null,(v,e)=>url(e.linkContato)?lk(e.linkContato,'Abrir'):'—']
+  ]);
+  const d=es.map(e=>e.levantadoEm).filter(Boolean).sort().pop();
+  $('atTit').textContent='Canais oferecidos no site de cada empresa'+(d?' · levantado em '+dmy(d):'')+'.';
+}
+
+/* trocas */
+function trocas(es){
+  tabela('trocas',es,[
+   ['Troca por arrependimento',e=>e.trocaArrepDias,(v,e)=>esc(e.trocaArrep||'—'),'max'],
+   ['Troca por defeito',e=>e.trocaDefeitoDias,(v,e)=>esc(e.trocaDefeito||'—'),'max'],
+   ['Prazo de devolução',e=>e.devolucaoDias,(v,e)=>esc(e.devolucao||'—'),'max'],
+   ['Frete da troca',e=>null,(v,e)=>esc(e.freteTroca||'—')],
+   ['Fácil achar troca e devolução no site?',e=>null,(v,e)=>simNao(e.trocaFacil)+`<small>${esc(e.trocaObs||'')}</small>`],
+   ['Política no site',e=>null,(v,e)=>url(e.linkTrocas)?lk(e.linkTrocas,'Abrir'):'—']
+  ]);
+}
+
+/* redes e marketplaces */
+function redes(es){
+  const mkt=(vende,seg,link,obs)=>{const k=/oficial/i.test(vende||'')&&!/sem/i.test(vende||'')?'sim':/n[ãa]o verificado/i.test(vende||'')||!vende?'nd':'nao';
+    return `<span class="si ${k}">${esc(vende||'sem dado')}</span>${seg!=null&&seg!==''?`<small>${segTxt(seg)} seguidores</small>`:''}${url(link)?`<small>${lk(link,/search|lista\./.test(link)?'Pesquisar':'Ver loja')}</small>`:''}${obs?`<small>${esc(obs)}</small>`:''}`};
+  tabela('redes',es,[
+   ['Instagram',e=>e.igSeg,(v,e)=>v==null?'—':`<b style="font-weight:400;font-size:17px">${segTxt(v)}</b><small>${e.igUser?lk('https://www.instagram.com/'+e.igUser+'/','@'+e.igUser):''}</small>`,'max'],
+   ['TikTok',e=>e.ttSeg,(v,e)=>v==null?'—':`<b style="font-weight:400;font-size:17px">${segTxt(v)}</b><small>${e.ttUser?lk('https://www.tiktok.com/@'+e.ttUser,'@'+e.ttUser):''}</small>${e.ttShop?'<small>Vende pelo TikTok Shop</small>':''}`,'max'],
+   ['Mercado Livre',e=>e.mlSeg,(v,e)=>mkt(e.mlVende,e.mlSeg,e.mlLink,e.mlObs),'max'],
+   ['Shopee',e=>e.shopeeSeg,(v,e)=>mkt(e.shopeeVende,e.shopeeSeg,e.shopeeLink,e.shopeeObs),'max']
+  ]);
+  const c=es.filter(e=>e.igSeg).sort((a,b)=>b.igSeg-a.igSeg);const mx=Math.max(...c.map(e=>e.igSeg),1);
+  $('igBar').innerHTML=c.map(e=>`<div class="barra"><span>${esc(e.nome)}</span><div class="tr"><i style="width:${Math.max(1,e.igSeg/mx*100)}%;background:${cor(e)}"></i></div><b>${segTxt(e.igSeg)}</b></div>`).join('')||'<div class="vazio">Sem dados de Instagram ainda.</div>';
+  const d=es.map(e=>e.levantadoEm).filter(Boolean).sort().pop();
+  $('redesAviso').textContent=(d?'Seguidores levantados em '+dmy(d)+'. ':'')+'Instagram via Instastatistics; TikTok e Mercado Livre direto das páginas. A Shopee só mostra lojas para quem está logado: preencha em “Empresas acompanhadas” ou use “Pesquisar”. ● marca o maior número.';
+}
+
+/* comparação proporcional */
+function prop(es){
+  const dec=(v,d=1)=>v==null||!isFinite(v)?'—':Number(v).toLocaleString('pt-BR',{maximumFractionDigits:d});
+  const D=es.map(e=>{const s=ultimo(e.id)||{};const fat=e.faturamentoValor||null;const raAnos=parseInt(s.anosRA,10)||null;const idade=e.fundacao?anoAtual-e.fundacao:null;const anos=idade||raAnos;
+    const recAno=s.recebidas!=null?s.recebidas*2:null,avAno=s.avaliadas!=null?s.avaliadas*2:null;
+    return {e,s,fat,idade,raAnos,anos,
+      taxaAval:s.recebidas?s.avaliadas/s.recebidas*100:null,
+      recMi:fat&&recAno!=null?recAno/fat:null,
+      avMi:fat&&avAno!=null?avAno/fat:null,
+      fatRec:fat&&recAno?fat*1000/recAno:null,
+      recAnoVida:s.totalReclamacoes&&anos?s.totalReclamacoes/anos:null,
+      fatAnoVida:fat&&anos?fat/anos:null}});
+  const L=[
+   ['Faturamento anual',d=>d.fat,(v,d)=>fatTxt(d.e),null],
+   ['Anos de empresa',d=>d.anos,(v,d)=>d.idade!=null?d.idade+' anos':d.raAnos!=null?d.raAnos+' anos*':'—',null],
+   ['Reclamações (6 meses)',d=>d.s.recebidas,v=>int(v),null],
+   ['Avaliações (6 meses)',d=>d.s.avaliadas,v=>int(v),null],
+   ['% das reclamações que o cliente avaliou',d=>d.taxaAval,v=>v==null?'—':pct(v),'max'],
+   ['Reclamações a cada R$ 1 mi faturado',d=>d.recMi,v=>dec(v),'min'],
+   ['Avaliações a cada R$ 1 mi faturado',d=>d.avMi,v=>dec(v),null],
+   ['Faturamento por reclamação',d=>d.fatRec,v=>v==null?'—':'R$ '+dec(v,0)+' mil','max'],
+   ['Reclamações por ano de vida (histórico RA)',d=>d.recAnoVida,v=>int(v==null?null:Math.round(v)),'min'],
+   ['Faturamento por ano de empresa',d=>d.fatAnoVida,v=>v==null?'—':'R$ '+dec(v)+' mi','max']
+  ];
+  $('prop').innerHTML=`<thead><tr><th>Indicador</th>${es.map(e=>`<th>${nomeLk(e)}</th>`).join('')}</tr></thead><tbody>`+L.map(([rot,get,fmt,best])=>{const vals=D.map(get);const ok=vals.filter(v=>typeof v==='number'&&isFinite(v));const alvo=best&&ok.length>1?(best==='max'?Math.max(...ok):Math.min(...ok)):null;
+    return `<tr><td>${rot}</td>${D.map((d,i)=>`<td class="${alvo!=null&&vals[i]===alvo?'best':''}">${fmt(vals[i],d)}</td>`).join('')}</tr>`}).join('')+'</tbody>';
+  const comR=D.filter(d=>d.recMi!=null).sort((a,b)=>a.recMi-b.recMi);const mx=Math.max(...comR.map(d=>d.recMi),1);
+  $('propBar').innerHTML=comR.map(d=>{const i=es.indexOf(d.e);return `<div class="barra"><span>${esc(d.e.nome)}</span><div class="tr"><i style="width:${Math.max(1,d.recMi/mx*100)}%;background:${cor(d.e)}"></i></div><b>${dec(d.recMi)}</b></div>`}).join('')||'<div class="vazio">Informe o faturamento das empresas para ver a comparação.</div>';
+  const n=D.find(d=>d.e.nossa),os=D.filter(d=>!d.e.nossa&&d.recMi!=null).map(d=>d.recMi).sort((a,b)=>a-b);
+  if(n&&n.recMi!=null&&os.length){const med=os.length%2?os[(os.length-1)/2]:(os[os.length/2-1]+os[os.length/2])/2;const x=n.recMi/med;const pos=comR.indexOf(n)+1;
+    $('propTit').innerHTML=`Proporcionalmente ao tamanho, a Saint Germain recebe <b>${dec(n.recMi)}</b> reclamações a cada R$ 1 mi faturado, ${x>=1.1?'<b>'+dec(x)+' vezes</b> a mediana dos concorrentes ('+dec(med)+')':x<=0.9?'abaixo da mediana dos concorrentes ('+dec(med)+')':'perto da mediana dos concorrentes ('+dec(med)+')'}. Fica em ${pos}º de ${comR.length} nesse indicador (1º = menos reclamações por real faturado).${n.e.faturamentoAno&&n.e.faturamentoAno<String(anoAtual-1)?' <small style="color:var(--mut)">Faturamento da Saint Germain é de '+esc(n.e.faturamentoAno)+'; atualize em “Empresas acompanhadas” para comparar no mesmo ano.</small>':''}`}
+  else $('propTit').textContent='Informe faturamento e notas para ver a comparação proporcional.';
+}
+
+/* gráfico */
+const svg=$('graf');
+function desenhar(){
+  const es=emps(),W=svg.clientWidth,H=svg.clientHeight;if(!W)return;
+  const datas=[...new Set(SNAP.filter(s=>s.nota!=null).map(s=>s.data))].sort();
+  if(!datas.length){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="currentColor" opacity=".55" font-size="14">O gráfico aparece com a primeira atualização.</text>`;$('leg').innerHTML='';return}
+  const L=W<520?34:44,R=W<520?16:28,T=20,B=34,iw=W-L-R,ih=H-T-B;
+  const vals=SNAP.filter(s=>s.nota!=null).map(s=>s.nota);
+  let lo=Math.floor(Math.min(...vals)-0.5),hi=Math.ceil(Math.max(...vals)+0.5);lo=Math.max(0,lo);hi=Math.min(10,hi);if(hi-lo<2)hi=Math.min(10,lo+2);
+  const x=i=>L+(datas.length===1?iw/2:i*iw/(datas.length-1)),y=v=>T+ih-(v-lo)/(hi-lo)*ih;
+  let g='';
+  for(let v=lo;v<=hi;v++)g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" opacity=".12"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" font-size="12" fill="currentColor" opacity=".6">${v}</text>`;
+  const passo=Math.max(1,Math.ceil(datas.length/(W<520?4:8)));
+  datas.forEach((d,i)=>{if(i%passo===0||i===datas.length-1)g+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="12" fill="currentColor" opacity=".6">${d.slice(8,10)}/${d.slice(5,7)}</text>`});
+  es.forEach((e,k)=>{const c=cor(e);const pts=snapsDe(e.id).filter(s=>s.nota!=null).map(s=>[x(datas.indexOf(s.data)),y(s.nota),s]);
+    if(pts.length>1)g+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round" points="${pts.map(p=>p[0]+','+p[1]).join(' ')}"/>`;
+    pts.forEach(p=>g+=`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="${c}"><title>${esc(e.nome)} · ${dmy(p[2].data)}: ${n1(p[2].nota)}</title></circle>`);
+    const lp=pts[pts.length-1];if(lp)g+=`<text x="${Math.min(lp[0]+8,W-R-30)}" y="${lp[1]-9}" font-size="13" fill="${c}">${n1(lp[2].nota)}</text>`});
+  svg.style.color='var(--ink)';svg.innerHTML=g;
+  $('leg').innerHTML=es.map((e,k)=>`<span><i style="background:${cor(e)}"></i>${esc(e.nome)}</span>`).join('');
+}
+const ro=new ResizeObserver(desenhar);ro.observe(svg);
+
+/* jornada */
+function matriz(){
+  const es=emps();
+  $('matriz').innerHTML=`<thead><tr><th>Etapa</th>${es.map(e=>`<th style="text-align:center">${nomeLk(e)}</th>`).join('')}</tr></thead><tbody>`+ETAPAS.map(et=>`<tr><td>${et}</td>${es.map(e=>{const l=JOR.filter(j=>j.empresa===e.id&&j.etapa===et);if(!l.length)return `<td><button class="cel" data-et="${esc(et)}" data-em="${esc(e.id)}"><small>registrar</small></button></td>`;const m=l.reduce((a,j)=>a+(+j.nota||0),0)/l.length;return `<td><button class="cel" data-et="${esc(et)}" data-em="${esc(e.id)}"><b>${n1(m)}</b><small>${l.length} obs.</small></button></td>`}).join('')}</tr>`).join('')+'</tbody>';
+}
+$('matriz').addEventListener('click',e=>{const b=e.target.closest('.cel');if(!b)return;$('jEmp').value=b.dataset.em;$('jEtapa').value=b.dataset.et;FJ=b.dataset.et;lista();$('fJ').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});$('jTexto').focus()});
+function lista(){
+  const es=emps();const nome=id=>(EMP.find(e=>e.id===id)||{}).nome||id;
+  $('jFiltro').innerHTML=`<button class="pill" data-f="" aria-pressed="${!FJ}">Todas as etapas</button>`+ETAPAS.filter(et=>JOR.some(j=>j.etapa===et&&es.some(e=>e.id===j.empresa))).map(et=>`<button class="pill" data-f="${esc(et)}" aria-pressed="${FJ===et}">${esc(et)}</button>`).join('');
+  const vis=new Set(es.map(e=>e.id));const l=JOR.filter(j=>vis.has(j.empresa)&&(!FJ||j.etapa===FJ)).sort((a,b)=>(b.data||'').localeCompare(a.data||'')||(b.criadoEm||'').localeCompare(a.criadoEm||''));
+  $('jLista').innerHTML=l.length?l.map(j=>`<div class="reg"><div class="t"><b>${esc(nome(j.empresa))}</b><span>${esc(j.etapa)}</span><span class="estrelas">${'★'.repeat(+j.nota||0)}${'☆'.repeat(5-(+j.nota||0))}</span><span>${dmy(j.data)}</span><button class="x" data-del="${esc(j.id)}">Excluir</button></div>${j.texto?`<p>${esc(j.texto)}</p>`:''}</div>`).join(''):'<div class="vazio">Nenhuma observação ainda. Registre o que você vê em cada etapa comprando ou simulando a jornada nas duas empresas.</div>';
+}
+$('jFiltro').onclick=e=>{const b=e.target.closest('[data-f]');if(b){FJ=b.dataset.f;lista()}};
+$('jLista').onclick=async e=>{const b=e.target.closest('[data-del]');if(!b||!db)return;if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Confirmar exclusão';return}try{await db.doc('jornada/'+b.dataset.del).delete();toast('Observação excluída')}catch(_){toast('Não consegui excluir')}};
+
+function selects(){
+  const es=todas(),opt=es.map(e=>`<option value="${esc(e.id)}">${esc(e.nome)}</option>`).join('');
+  ['jEmp','mEmp'].forEach(id=>{const v=$(id).value;$(id).innerHTML=opt;if(v&&es.some(e=>e.id===v))$(id).value=v});
+  if(!$('jEtapa').options.length)$('jEtapa').innerHTML=ETAPAS.map(e=>`<option>${e}</option>`).join('');
+  if(!$('jData').value)$('jData').value=hoje();
+}
+function notasUI(){$('jNotas').innerHTML=[1,2,3,4,5].map(n=>`<button type="button" data-n="${n}" aria-pressed="${notaSel===n}" aria-label="Nota ${n}">${n}</button>`).join('')}
+$('jNotas').onclick=e=>{const b=e.target.closest('[data-n]');if(b){notaSel=+b.dataset.n;notasUI()}};
+$('fJ').onsubmit=async e=>{e.preventDefault();if(!db){toast('Sem conexão com o banco');return}
+  if(!notaSel){toast('Dê uma nota de 1 a 5 para a etapa');return}
+  const d={empresa:$('jEmp').value,etapa:$('jEtapa').value,data:$('jData').value||hoje(),nota:notaSel,texto:$('jTexto').value.trim(),criadoEm:new Date().toISOString()};
+  try{await db.collection('jornada').add(d);$('jTexto').value='';notaSel=0;notasUI();toast('Observação salva')}catch(_){toast('Não consegui salvar')}};
+
+$('fM').onsubmit=async e=>{e.preventDefault();if(!db)return;const id=$('mEmp').value;const nota=num($('mNota').value);if(nota==null){toast('Informe a nota');return}
+  const ant=ultimo(id)||{};const d=Object.assign({},ant,{empresa:id,data:hoje(),nota,reputacao:$('mRep').value,atualizadoEm:new Date().toISOString(),fonte:'manual'});
+  [['mRes','resolvidas'],['mResp','respondidas'],['mVolt','voltariam'],['mCons','notaConsumidor']].forEach(([i,k])=>{const v=num($(i).value);if(v!=null)d[k]=v});
+  const t=$('mTempo').value.trim();if(t){d.tempoResposta=t;d.tempoHoras=horas(t)}
+  delete d.id;
+  try{await db.doc('snapshots/'+id+'__'+hoje()).set(d);toast('Nota de hoje salva');$('fM').reset()}catch(_){toast('Não consegui salvar')}};
+
+function empLista(){
+  if($('empLista').contains(document.activeElement))return;
+  $('empLista').innerHTML=todas().map(e=>`<div class="reg"><div class="t"><b>${esc(e.nome)}</b>${e.nossa?'<span>nossa empresa</span>':''}<span>${esc(e.raSlug||'')}</span>${e.nossa?'':`<button class="x" data-rm="${esc(e.id)}">Tirar do radar</button>`}</div>
+   <form class="form" data-ed="${esc(e.id)}" style="margin:10px 0 0;padding:12px">
+    <label>Ano de fundação<input name="fundacao" inputmode="numeric" value="${esc(e.fundacao||'')}" placeholder="2019"></label>
+    <label>Faturamento<input name="faturamento" value="${esc(e.faturamento||'')}" placeholder="R$ 40 mi"></label>
+    <label>Ano do faturamento<input name="faturamentoAno" value="${esc(e.faturamentoAno||'')}" placeholder="2025"></label>
+    <label>Fonte<input name="faturamentoFonte" value="${esc(e.faturamentoFonte||'')}" placeholder="Matéria, balanço…"></label>
+    <label class="full">Site<input name="site" value="${esc(e.site||'')}" placeholder="https://www.…"></label>
+    <label>Vende na Shopee?<select name="shopeeVende">${['Não verificado','Loja oficial','Sem loja oficial','Não vende'].map(o=>`<option${(e.shopeeVende||'Não verificado')===o?' selected':''}>${o}</option>`).join('')}</select></label>
+    <label>Seguidores na Shopee<input name="shopeeSeg" inputmode="numeric" value="${esc(e.shopeeSeg??'')}" placeholder="12500"></label>
+    <label style="grid-column:span 2">Link da loja na Shopee<input name="shopeeLink" value="${esc(e.shopeeLink||'')}" placeholder="https://shopee.com.br/…"></label>
+    <div class="full" style="display:flex;justify-content:flex-end"><button class="btn min" type="submit">Salvar dados de ${esc(e.nome)}</button></div>
+   </form></div>`).join('');
+}
+$('empLista').addEventListener('submit',async ev=>{const f=ev.target.closest('[data-ed]');if(!f||!db)return;ev.preventDefault();
+  const fd=new FormData(f);const fund=parseInt(fd.get('fundacao'),10);const fat=String(fd.get('faturamento')||'').trim();
+  const m=/([\d.,]+)\s*(bi|mi|mil)/i.exec(fat);let val=null;if(m){val=num(m[1]);val=val==null?null:val*(/bi/i.test(m[2])?1000:/mil/i.test(m[2])?0.001:1)}
+  try{await db.doc('empresas/'+f.dataset.ed).update({fundacao:isNaN(fund)?null:fund,faturamento:fat,faturamentoValor:val,faturamentoAno:String(fd.get('faturamentoAno')||'').trim(),faturamentoFonte:String(fd.get('faturamentoFonte')||'').trim(),site:String(fd.get('site')||'').trim(),shopeeVende:String(fd.get('shopeeVende')||''),shopeeSeg:(v=>isNaN(v)?null:v)(parseInt(String(fd.get('shopeeSeg')||'').replace(/\D/g,''),10)),shopeeLink:String(fd.get('shopeeLink')||'').trim()});document.activeElement&&document.activeElement.blur();toast('Dados salvos')}catch(_){toast('Não consegui salvar')}});
+$('empLista').onclick=async e=>{const b=e.target.closest('[data-rm]');if(!b||!db)return;if(b.dataset.ok!=='1'){b.dataset.ok='1';b.textContent='Confirmar';return}try{await db.doc('empresas/'+b.dataset.rm).delete();toast('Empresa retirada do radar')}catch(_){toast('Não consegui retirar')}};
+$('fE').onsubmit=async e=>{e.preventDefault();if(!db)return;const nome=$('eNome').value.trim();const m=/reclameaqui\.com\.br\/empresa\/([a-z0-9\-]+)/i.exec($('eLink').value);
+  if(!nome||!m){toast('Informe o nome e o link da empresa no Reclame Aqui');return}
+  const id=m[1].toLowerCase();try{await db.doc('empresas/'+id).set({nome,raSlug:id,nossa:false,ordem:EMP.length+1});$('fE').reset();toast(nome+' entra no radar na próxima atualização')}catch(_){toast('Não consegui adicionar')}};
+$('bEmp').onclick=()=>{$('dEmp').open=true;$('dEmp').scrollIntoView({block:'start'})};
+
+/* dados */
+notasUI();render();
+try{const P=window.parent&&window.parent.SG_radar;if(P&&P.altura){const al=()=>P.altura(document.documentElement.scrollHeight);new ResizeObserver(al).observe(document.body);document.addEventListener('toggle',al,true);al()}}catch(_){}
+(async()=>{
+  const timer=setTimeout(()=>{$('atual').textContent='Não consegui alcançar os dados ainda.'},10000);
+  try{db=window.parent&&window.parent.SG_radar?window.parent.SG_radar.db():null}catch(_){}
+  if(!db){clearTimeout(timer);$('atual').textContent='Abra o radar pela Agenda do Saint Center.';return}
+  const ok=s=>{if(!s.metadata.fromCache)clearTimeout(timer)};
+  const err=e=>{clearTimeout(timer);$('atual').textContent='Erro ao carregar ('+(e&&e.code||'?')+').'};
+  db.collection('empresas').onSnapshot(s=>{EMP=s.docs.map(d=>({id:d.id,...d.data()}));ok(s);render()},err);
+  db.collection('snapshots').onSnapshot(s=>{SNAP=s.docs.map(d=>({id:d.id,...d.data()}));ok(s);render()},err);
+  db.collection('jornada').onSnapshot(s=>{JOR=s.docs.map(d=>({id:d.id,...d.data()}));ok(s);render()},err);
+})();
+}
+</script>
+</body>
+</html>
