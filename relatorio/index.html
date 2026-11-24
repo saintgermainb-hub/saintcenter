@@ -43,6 +43,8 @@ textarea{resize:vertical;min-height:90px}
 .selo.pend::before{content:"○  "}
 
 /* RA */
+.ra-sr{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;border:1px solid var(--soft);background:var(--soft);padding:14px;margin-bottom:16px}
+.ra-sr .passo{max-width:200px}
 .total-ra{display:flex;align-items:baseline;gap:14px}
 .total-ra b{font-size:46px;font-weight:400;letter-spacing:.02em}
 .motivos{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
@@ -208,6 +210,10 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.1em;text-transform
 .r-amar{display:flex;justify-content:space-between;align-items:center;border:1.5px solid #f2b43a;border-radius:9px;padding:18px 14px;margin-top:14px;background:#0f0d07}
 .r-amar span{font-size:16px;color:#cfcfd4;font-weight:500}
 .r-amar b{font-family:"Oswald",sans-serif;font-weight:600;font-size:46px;color:#f2b43a;line-height:1}
+.r-srra{display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a2e;border-radius:9px;padding:14px;margin-top:10px;background:#0d0d0f}
+.r-srra span{font-size:16px;color:#cfcfd4;font-weight:500}
+.r-srra small{display:block;font-size:13px;color:#6c6c72;margin-top:2px}
+.r-srra b{font-family:"Oswald",sans-serif;font-weight:600;font-size:38px;line-height:1}
 .r-pm{display:flex;align-items:center;gap:12px;font-family:"Oswald",sans-serif;font-size:19px;letter-spacing:.2em;color:#f2b43a;margin:20px 0 6px;white-space:nowrap}
 .r-pm::after{content:"";flex:1;height:1px;background:#333}
 .r-rm{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #222225;padding:9px 0}
@@ -249,6 +255,10 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.1em;text-transform
           <div><span class="k">Reclame Aqui</span><h2>Reclamações que entraram no dia</h2><div class="mut" id="raSub"></div></div>
           <div class="total-ra"><b id="raTotal">0</b><span class="k">no dia</span></div>
         </div>
+        <div class="ra-sr">
+          <label class="campo"><span>Ainda sem resposta no Reclame Aqui agora <span class="mut">(conta também as de dias anteriores)</span></span><div id="raSrBox"></div></label>
+          <span class="selo" id="raSrSelo"></span>
+        </div>
         <div id="raEdita">
           <div class="ra-extra">
             <label class="campo"><span>Quantidade</span><div class="passo"><button type="button" data-p="-1" data-alvo="raQtd">−</button><input id="raQtd" type="number" min="1" value="1" inputmode="numeric"><button type="button" data-p="1" data-alvo="raQtd">+</button></div></label>
@@ -284,9 +294,9 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.1em;text-transform
       <div class="rel">
         <div>
           <div class="bloco" id="relSuporte">
-            <div class="topo"><div><span class="k">1 · Suporte AvantDesk</span><h2>PDF do relatório diário</h2></div><span class="selo" id="supSelo"></span></div>
+            <div class="topo"><div><span class="k">1 · Suporte</span><h2>PDF do relatório diário</h2></div><span class="selo" id="supSelo"></span></div>
             <div id="supSobe">
-              <label class="solta" id="solta"><b>Solte aqui o PDF do AvantDesk</b><span class="mut">ou clique para escolher o arquivo.<br>Relatórios › Relatório diário › Gerar PDF</span>
+              <label class="solta" id="solta"><b>Solte aqui o PDF do relatório diário</b><span class="mut">ou clique para escolher o arquivo.<br>Relatórios › Relatório diário › Gerar PDF</span>
                 <input type="file" id="arqPdf" accept="application/pdf,.pdf" hidden></label>
               <details><summary>Ou colar o texto da página</summary>
                 <p class="mut">No AvantDesk, abra o Relatório diário, aperte Ctrl+A e Ctrl+C e cole aqui.</p>
@@ -490,6 +500,9 @@ function desenharRA(){
   const total = lanc.reduce((a,l) => a + (Number(l.qtd)||0), 0);
   $('raTotal').textContent = total;
   $('raSub').textContent = br(S.data) + (edita ? '' : ' · você pode ver, sem editar');
+  const ri = S.dia.raInfo || {};
+  if(!document.activeElement || document.activeElement.id !== 'raSr') $('raSrBox').innerHTML = passo('raSr', ri.semResposta, !edita);
+  $('raSrSelo').className = 'selo ' + (ri._em ? 'ok' : 'pend'); $('raSrSelo').textContent = ri._em ? quando(ri) : 'Não informado hoje';
   $('raEdita').hidden = !edita; $('raNovo').hidden = !(edita && S.p.incluirMotivo);
   const motivos = S.motivosRA.slice(); Object.keys(c).forEach(m => { if(!motivos.includes(m)) motivos.push(m); });
   $('raMotivos').innerHTML = motivos.map(m => `<button type="button" class="mot${c[m]?' tem':''}" data-mot="${esc(m)}" ${edita?'':'disabled'}><span>${esc(m)}${edita?'<br><span class="mais">+ lançar</span>':''}</span><b>${c[m]||0}</b></button>`).join('');
@@ -497,6 +510,17 @@ function desenharRA(){
     `<div class="lin cabecalho"><span class="k">Hora</span><span class="k">Motivo</span><span class="k">Qtd</span><span class="k so-largo">Observação</span><span class="k so-largo">Por</span><span></span></div>` +
     lanc.slice().sort((a,b) => String(b.em).localeCompare(String(a.em))).map(l => `<div class="lin"><span>${hora(l.em)}</span><span>${esc(l.motivo)}</span><span>${l.qtd}</span><span class="mut so-largo">${esc(l.obs)}</span><span class="mut so-largo">${esc(l.por)}</span><span>${edita?`<button type="button" class="ghost" data-apaga="${esc(l.id)}">Apagar</button>`:''}</span></div>`).join('');
 }
+let tSr = null;
+$('raSrBox').addEventListener('input', () => {
+  if(S.p.ra !== 'editar') return;
+  const v = $('raSr').value, data = S.data;
+  S.dia.raInfo = Object.assign({}, S.dia.raInfo, { semResposta: v }); desenharRelatorio();
+  msg('mRA','Salvando…'); clearTimeout(tSr);
+  tSr = setTimeout(async () => {
+    try{ const r = await call('salvarRAInfo', data, { semResposta: v }); if(data===S.data){ Object.assign(S.dia.raInfo, r); $('raSrSelo').className='selo ok'; $('raSrSelo').textContent = quando(S.dia.raInfo); msg('mRA',''); desenharRelatorio(); } }
+    catch(er){ msg('mRA', er.message, 'erro'); }
+  }, 1000);
+});
 $('raMotivos').addEventListener('click', async e => {
   const b = e.target.closest('[data-mot]'); if(!b || b.disabled) return;
   const qtd = Math.max(1, Number($('raQtd').value)||1), obs = $('raObs').value.trim(), motivo = b.dataset.mot;
@@ -791,7 +815,7 @@ function montarRelatorio(){
   <div class="r-grid">
     <div class="r-col">
       <div class="r-card">
-        <div class="r-hd"><div class="t">${IC.fone}<span>SUPORTE <span class="r-azul">AVANTDESK</span></span></div>
+        <div class="r-hd"><div class="t">${IC.fone}<span>SUPORTE</span></div>
           <div class="r-eq">EQUIPE SUPORTE<small>${esc(composicao('suporte'))}</small></div></div>
         <div class="r-kpis">
           <div class="r-kpi">${IC.doc}<div class="l">TICKETS CRIADOS<br>NO DIA</div><div class="n">${fmt(criados)}</div></div>
@@ -810,7 +834,7 @@ function montarRelatorio(){
       </div>
       <div class="r-card">
         <div class="r-mt">${IC.estrela}<span>MOTIVOS DOS ATENDIMENTOS DO DIA</span></div>
-        ${mot.length ? mot.map((m,i) => `<div class="r-mo"><span class="i">${i+1}</span><span class="l">${esc(m.nome)}</span><span class="n">${fmt(num(m.qtd))}</span></div>`).join('') : `<div class="r-mo x"><span class="l">Motivos ainda não lidos do AvantDesk</span><span></span></div>`}
+        ${mot.length ? mot.map((m,i) => `<div class="r-mo"><span class="i">${i+1}</span><span class="l">${esc(m.nome)}</span><span class="n">${fmt(num(m.qtd))}</span></div>`).join('') : `<div class="r-mo x"><span class="l">Motivos ainda não lidos do PDF</span><span></span></div>`}
         <div class="r-mo x"><span class="l">Demais motivos classificados · fora dos 5 principais</span><span class="n">${fmt(num(s.demais))}</span></div>
         <div class="r-mo x"><span class="l">Sem motivo classificado${semMotivoSub}</span><span class="n">${fmt(num(s.semMotivo))}</span></div>
         <div class="r-tot"><span>= TOTAL CRIADO NO DIA</span><b>${fmt(num(s.totalCriado) ?? criados)}</b></div>
@@ -821,6 +845,7 @@ function montarRelatorio(){
         <div class="r-ra-tit"><span class="ra">RA</span><span>RECLAME AQUI</span></div>
         <div class="r-box"><div class="e">EQUIPE RECLAME AQUI</div><small>${esc(composicao('ra'))}</small></div>
         <div class="r-amar"><span>Reclamações que entraram no dia</span><b>${raTot}</b></div>
+        <div class="r-srra"><span>Ainda sem resposta no RA<small>inclui dias anteriores</small></span><b>${fmt(num((S.dia.raInfo||{}).semResposta))}</b></div>
         <div class="r-pm">POR MOTIVO · ${dd}/${mm}</div>
         ${raLista.length ? raLista.map(([k,v]) => `<div class="r-rm"><span>${esc(k)}</span><b>${v}</b></div>`).join('') : `<div class="r-rm"><span>Nenhuma reclamação lançada</span><b>0</b></div>`}
       </div>
@@ -850,6 +875,7 @@ function desenharRelatorio(){
   const raTot = ra.reduce((a,x)=>a+(Number(x.qtd)||0),0);
   $('checkTimes').innerHTML = [
     ['Reclame Aqui', ra.length ? `${raTot} em ${ra.length} ${ra.length===1?'lançamento':'lançamentos'}` : 'Nada lançado', ra.length],
+    ['RA sem resposta', (S.dia.raInfo||{})._em ? `${S.dia.raInfo.semResposta}` : 'Não informado', (S.dia.raInfo||{})._em],
     ['Lentes', l && l._em ? quando(l) + (l.parouEm ? ` · parou em ${l.parouEm}` : '') : 'Ainda não preenchido', l && l._em],
     ['Suporte (PDF)', s ? 'Lido' : 'Falta o PDF', !!s],
     ['Equipes', e && e._em ? 'Informada' : 'Não informada', e && e._em]
@@ -875,7 +901,7 @@ async function gerarCanvas(){
 }
 function faltando(){
   const f = [];
-  if(!S.dia.suporte) f.push('PDF do AvantDesk');
+  if(!S.dia.suporte) f.push('PDF do suporte');
   if(!S.dia.lentes || !S.dia.lentes._em) f.push('números de Lentes');
   if(!(S.dia.ra||[]).length) f.push('lançamentos do Reclame Aqui');
   return f;
@@ -933,7 +959,7 @@ function linhaDia(r, d){
   const x = r.dias[d] || {}, s = x.suporte || {}, l = x.lentes || null, ra = r.ra[d] || null;
   return {
     d, fila: num(s.semResolucao), criados: num(s.criados), resolvidos: num(s.resolvidos), regua: num(s.regua),
-    ra: ra ? Object.values(ra).reduce((a,b)=>a+b,0) : null,
+    ra: ra ? Object.values(ra).reduce((a,b)=>a+b,0) : null, raSr: x.rainfo ? num(x.rainfo.semResposta) : null,
     entraram: l ? num(l.entraram) : null, feitas: l ? lenFeitas(l) : null, falta: l ? lenFalta(l) : null
   };
 }
@@ -961,6 +987,7 @@ function desenharEvo(){
     ['Tickets criados', n0(media(col(L,'criados'))), 'média por dia', delta(media(col(L,'criados')), media(col(A,'criados')), true)],
     ['Resolvidos pela equipe', n0(media(col(L,'resolvidos'))), 'média por dia', delta(media(col(L,'resolvidos')), media(col(A,'resolvidos')), false)],
     ['Reclame Aqui', n0(soma(col(L,'ra'))), 'reclamações no período', delta(soma(col(L,'ra')), soma(col(A,'ra')), true)],
+    ['RA sem resposta', n0(ultimo(col(L,'raSr'))), 'no último dia', delta(ultimo(col(L,'raSr')), ultimo(col(A,'raSr')), true)],
     ['Lentes finalizadas', n0(soma(col(L,'feitas'))), 'no período', delta(soma(col(L,'feitas')), soma(col(A,'feitas')), false)],
     ['Lentes a fazer', n0(ultimo(col(L,'falta'))), 'tratativa + pendentes, último dia', delta(ultimo(col(L,'falta')), ultimo(col(A,'falta')), true)]
   ];
@@ -975,6 +1002,7 @@ function desenharEvo(){
     <div class="gc"><h3>Fila sem resolução no fim do dia</h3><div class="mut">Quanto menor, melhor</div><div class="fig" id="gFila"></div></div>
     <div class="gc"><h3>Tickets criados × resolvidos pela equipe</h3><div class="leg"><span><i style="background:${COR.azul}"></i>Criados</span><span><i style="background:${COR.laranja}"></i>Resolvidos</span></div><div class="fig" id="gEntSai"></div></div>
     <div class="gc"><h3>Reclame Aqui por dia</h3><div class="mut">Reclamações lançadas pelo time</div><div class="fig" id="gRA"></div></div>
+    <div class="gc"><h3>Reclame Aqui ainda sem resposta</h3><div class="mut">Informado pelo time a cada dia · quanto menor, melhor</div><div class="fig" id="gRASr"></div></div>
     <div class="gc"><h3>Motivos do Reclame Aqui no período</h3><div class="mut">Variação contra os ${S.per} dias anteriores</div>
       <div class="hb">${motL.length ? motL.map(([m,q]) => { const a = motA[m]||0, dl = a ? Math.round((q-a)/a*100) : null;
         return `<div class="hl"><span>${esc(m)}</span><span class="t"><i style="width:${Math.max(2,q/motMax*100)}%"></i></span><span class="n">${q}</span><span class="dl">${dl==null?'novo':(dl>0?'▲ ':dl<0?'▼ ':'')+Math.abs(dl)+'%'}</span></div>`; }).join('') : '<div class="mut">Nenhuma reclamação no período.</div>'}</div></div>
@@ -984,10 +1012,11 @@ function desenharEvo(){
   grafico('gFila', 'linha', X, [{ nome:'Sem resolução', cor:COR.azul, v:col(L,'fila') }]);
   grafico('gEntSai', 'linha', X, [{ nome:'Criados', cor:COR.azul, v:col(L,'criados') }, { nome:'Resolvidos', cor:COR.laranja, v:col(L,'resolvidos') }]);
   grafico('gRA', 'barra', X, [{ nome:'Reclamações', cor:COR.azul, v:col(L,'ra') }]);
+  grafico('gRASr', 'linha', X, [{ nome:'Sem resposta', cor:COR.azul, v:col(L,'raSr') }]);
   grafico('gLen', 'linha', X, [{ nome:'Subiram', cor:COR.azul, v:col(L,'entraram') }, { nome:'Finalizadas', cor:COR.verde, v:col(L,'feitas') }]);
   grafico('gLenF', 'linha', X, [{ nome:'A fazer', cor:COR.azul, v:col(L,'falta') }]);
-  $('evoTab').innerHTML = `<table><thead><tr><th>Dia</th><th>Fila</th><th>Criados</th><th>Resolvidos</th><th>Régua</th><th>Reclame Aqui</th><th>Lentes subiram</th><th>Finalizadas</th><th>A fazer</th></tr></thead><tbody>` +
-    L.slice().reverse().map(x => `<tr><td>${br(x.d)}</td>${['fila','criados','resolvidos','regua','ra','entraram','feitas','falta'].map(k => `<td>${x[k]==null?'—':x[k]}</td>`).join('')}</tr>`).join('') + `</tbody></table>`;
+  $('evoTab').innerHTML = `<table><thead><tr><th>Dia</th><th>Fila</th><th>Criados</th><th>Resolvidos</th><th>Régua</th><th>RA entraram</th><th>RA sem resposta</th><th>Lentes subiram</th><th>Finalizadas</th><th>A fazer</th></tr></thead><tbody>` +
+    L.slice().reverse().map(x => `<tr><td>${br(x.d)}</td>${['fila','criados','resolvidos','regua','ra','raSr','entraram','feitas','falta'].map(k => `<td>${x[k]==null?'—':x[k]}</td>`).join('')}</tr>`).join('') + `</tbody></table>`;
 }
 const GRAF = {};
 function grafico(id, tipo, X, series){
