@@ -792,7 +792,7 @@ function montarRelatorio(){
   const nota = `Só entram os chamados que chegaram até a equipe. O que a IA atendeu e concluiu sozinha fica fora destes números.` +
     (regua ? ` Os ${regua} encerrados pela régua fecharam por falta de retorno do cliente: contam como saída do dia, não como produção de agente.` : '') + frase;
   // motivos
-  const mot = (s.motivos||[]).slice(0,5);
+  const mot = (s.motivos||[]).filter(m => num(m.qtd) !== 0).slice(0,5); // motivo zerado não aparece
   const criados = num(s.criados);
   // RA
   const c = contagemRA(ra); const raTot = ra.reduce((a,x)=>a+(Number(x.qtd)||0),0);
@@ -835,8 +835,8 @@ function montarRelatorio(){
       <div class="r-card">
         <div class="r-mt">${IC.estrela}<span>MOTIVOS DOS ATENDIMENTOS DO DIA</span></div>
         ${mot.length ? mot.map((m,i) => `<div class="r-mo"><span class="i">${i+1}</span><span class="l">${esc(m.nome)}</span><span class="n">${fmt(num(m.qtd))}</span></div>`).join('') : `<div class="r-mo x"><span class="l">Motivos ainda não lidos do PDF</span><span></span></div>`}
-        <div class="r-mo x"><span class="l">Demais motivos classificados · fora dos 5 principais</span><span class="n">${fmt(num(s.demais))}</span></div>
-        <div class="r-mo x"><span class="l">Sem motivo classificado${semMotivoSub}</span><span class="n">${fmt(num(s.semMotivo))}</span></div>
+        ${num(s.demais) !== 0 ? `<div class="r-mo x"><span class="l">Demais motivos classificados · fora dos 5 principais</span><span class="n">${fmt(num(s.demais))}</span></div>` : ''}
+        ${num(s.semMotivo) !== 0 ? `<div class="r-mo x"><span class="l">Sem motivo classificado${semMotivoSub}</span><span class="n">${fmt(num(s.semMotivo))}</span></div>` : ''}
         <div class="r-tot"><span>= TOTAL CRIADO NO DIA</span><b>${fmt(num(s.totalCriado) ?? criados)}</b></div>
       </div>
     </div>
