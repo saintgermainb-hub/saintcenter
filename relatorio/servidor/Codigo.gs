@@ -210,7 +210,7 @@ const API_FN = {
     const p = ctx.p, r = { data };
     const veRel = !!p.relatorio;
     if (p.lentes || veRel) r.lentes = lerSecao(data, 'lentes');
-    if (p.ra || veRel) r.ra = lancamentosRA(data);
+    if (p.ra || veRel) { r.ra = lancamentosRA(data); r.raInfo = lerSecao(data, 'rainfo'); }
     if (veRel) {
       r.suporte = lerSecao(data, 'suporte');
       r.equipes = lerSecao(data, 'equipes');
@@ -240,6 +240,13 @@ const API_FN = {
     travar(() => aba('ra').appendRow([id, data, motivo, qtd, String(obs || '').slice(0, 200), ctx.u.nome || ctx.u.login, agora()]));
     log(ctx, 'ra +' + qtd, data + ' ' + motivo);
     return lancamentosRA(data);
+  },
+
+  salvarRAInfo(ctx, data, obj) {
+    data = checarData(data);
+    if (ctx.p.ra !== 'editar') throw new Error('Você pode ver, mas não editar, o Reclame Aqui.');
+    const v = obj && obj.semResposta;
+    return gravarSecao(ctx, data, 'rainfo', { semResposta: (v === '' || v == null) ? '' : Math.max(0, Math.round(Number(v) || 0)) });
   },
 
   raRemover(ctx, data, id) {
@@ -321,7 +328,7 @@ const API_FN = {
     const dias = {}, ra = {};
     linhas('dias').forEach(l => {
       const d = String(l[1]), sec = String(l[2]);
-      if (d < de || d > ate || (sec !== 'suporte' && sec !== 'lentes')) return;
+      if (d < de || d > ate || (sec !== 'suporte' && sec !== 'lentes' && sec !== 'rainfo')) return;
       let o = null; try { o = JSON.parse(l[3] || 'null'); } catch (_) { o = null; }
       if (!o) return;
       if (sec === 'suporte') o = { criados: o.criados, resolvidos: o.resolvidos, regua: o.regua, semResolucao: o.semResolucao,
