@@ -124,11 +124,17 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.1em;text-transform
 .tab-evo td:first-child,.tab-evo th:first-child{text-align:left}
 
 /* config */
+.incluir{border:1px solid var(--soft);background:var(--soft);padding:14px}
+#pesAchados .ach{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg);border:1px solid var(--g3);border-top:0;padding:10px 12px}
+#pesAchados .ach:first-child{border-top:1px solid var(--g3);margin-top:6px}
+#pesAchados .ach .bt{display:flex;gap:6px;flex-wrap:wrap}
+#pesAchados .ach button{padding:7px 10px;font-size:10px}
+.pes .lin .rm{padding:7px 10px;font-size:10px}
 .barra-salvar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--g3);padding:14px 0;display:flex;gap:14px;align-items:center;flex-wrap:wrap;z-index:5}
 .barra-salvar.pend{border-top:2px solid var(--fg)}
 .pes .lin.fora>div:first-child{color:var(--g2)}
 .pes .pers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.pes .lin{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) repeat(3,minmax(0,.8fr));gap:12px;align-items:center;padding:14px 2px;border-bottom:1px solid var(--soft)}
+.pes .lin{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) repeat(2,minmax(0,1fr)) 100px;gap:12px;align-items:center;padding:14px 2px;border-bottom:1px solid var(--soft)}
 .pes .lin.cabecalho{border-bottom:1px solid var(--g3);padding:8px 2px}
 .pes select{padding:8px;font-size:13px}
 .pes .rap{display:flex;gap:4px;flex-wrap:wrap}
@@ -335,9 +341,15 @@ details summary{cursor:pointer;font-size:12px;letter-spacing:.1em;text-transform
       <div class="bloco">
         <div class="topo">
           <div><span class="k">Permissões</span><h2>Quem tem acesso e o que pode ver e editar</h2>
-            <div class="mut">Escolha o acesso de cada pessoa do Saint Center. Ao salvar, o Relatório Diário aparece (ou some) no menu dela.</div></div>
+            <div class="mut">Inclua quem usa o sistema, escolha o perfil e salve. Ao salvar, o Relatório Diário aparece no menu de quem foi incluída e some do menu de quem foi removida.</div></div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:8px"><input id="pesBusca" placeholder="Buscar pessoa" style="flex:1 1 240px;width:auto"><label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="pesSo" style="width:auto"> Só quem tem acesso</label><span class="mut" id="pesConta"></span></div>
+        <div class="incluir">
+          <span class="k">Incluir pessoa</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><input id="pesBusca" placeholder="Digite o nome de quem está cadastrado no Saint Center" style="flex:1 1 280px;width:auto"><button type="button" class="ghost" id="pesAtualizar" title="Busca de novo quem foi cadastrado agora no Saint Center">Atualizar lista</button></div>
+          <div id="pesAchados"></div>
+          <div class="mut" style="margin-top:6px">Quem você cadastrar em Saint Center › Pessoas e acessos aparece nesta busca (clique em Atualizar lista se acabou de cadastrar).</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 4px"><span class="k">Pessoas com acesso</span><span class="mut" id="pesConta"></span></div>
         <div class="pes" id="pesLista"></div>
       </div>
       <div class="bloco">
@@ -1042,7 +1054,9 @@ async function montarCfg(){
   if(!S.cfg) return;
   S.cfgEd = S.cfgEd || JSON.parse(JSON.stringify(S.cfg));
   desenharMotivos();
-  if(!S.pessoas){
+  if(!S.pessoas || S.recarregar){
+    S.recarregar = false;
+    const antes = S.acessoEd || {};
     $('pesLista').innerHTML = `<div class="vazio">Carregando as pessoas do Saint Center…</div>`;
     S.pesSC = false;
     try{
@@ -1057,7 +1071,7 @@ async function montarCfg(){
       S.pessoas = l.map(p => ({ login:p.login, nome:p.nome, cargo:p.cargo, temAcesso:true }));
     }
     S.pessoas.sort((a,b) => String(a.nome).localeCompare(String(b.nome),'pt-BR',{sensitivity:'base'}));
-    S.acessoEd = {}; S.pessoas.forEach(p => S.acessoEd[p.login] = p.temAcesso);
+    S.acessoEd = {}; S.pessoas.forEach(p => S.acessoEd[p.login] = (p.login in antes) ? antes[p.login] : p.temAcesso);
   }
   desenharPessoasCfg();
 }
@@ -1067,33 +1081,48 @@ function perfilAtual(p){
   return perfilDe(S.cfgEd.acessos[p.login]);
 }
 function desenharPessoasCfg(){
-  const ac = S.cfgEd.acessos, q = norm($('pesBusca').value), so = $('pesSo').checked;
+  const ac = S.cfgEd.acessos, q = norm($('pesBusca').value).trim();
   const rot = {ra:'Reclame Aqui',lentes:'Lentes',relatorio:'Relatório'};
   const sel = (login, k) => `<label class="k" style="display:grid;gap:4px">${rot[k]}<select data-login="${esc(login)}" data-k="${k}">${NIV[k].map(([v,t]) => `<option value="${v}" ${((ac[login]||{})[k]||'')===v?'selected':''}>${t}</option>`).join('')}</select></label>`;
-  const lista = S.pessoas.filter(p => (!q || norm(p.nome+' '+p.cargo+' '+p.login).includes(q)) && (!so || p.adminMod || S.acessoEd[p.login]));
-  const n = S.pessoas.filter(p => p.adminMod || S.acessoEd[p.login]).length;
-  $('pesConta').textContent = `${n} com acesso · ${S.pessoas.length} no Saint Center`;
-  if(!lista.length){ $('pesLista').innerHTML = `<div class="vazio">Ninguém encontrado.</div>`; return; }
-  $('pesLista').innerHTML = `<div class="lin cabecalho"><span class="k">Pessoa</span><span class="k">Acesso</span><span class="k" style="grid-column:span 3">O que ela vê e edita</span></div>` +
+  // busca para incluir
+  const fora = S.pessoas.filter(p => !p.adminMod && !S.acessoEd[p.login]);
+  const achados = q ? fora.filter(p => norm(p.nome+' '+p.cargo+' '+p.login).includes(q)).slice(0,8) : [];
+  $('pesAchados').innerHTML = !q ? '' : !achados.length ? `<div class="mut" style="margin-top:8px">Ninguém sem acesso com esse nome. ${S.pessoas.some(p => norm(p.nome+' '+p.login).includes(q)) ? 'Essa pessoa já está na lista abaixo.' : 'Se ela acabou de ser cadastrada, clique em Atualizar lista.'}</div>` :
+    achados.map(p => `<div class="ach"><div>${esc(p.nome)} <span class="mut">· ${esc(p.cargo||p.login)}</span></div><div class="bt">${PERFIS.filter(x=>x[0]!=='nenhum').map(([k,t]) => `<button type="button" data-incluir="${esc(p.login)}" data-pf="${k}">+ ${t.replace('Time ','')}</button>`).join('')}</div></div>`).join('');
+  // quem tem acesso
+  const lista = S.pessoas.filter(p => p.adminMod || S.acessoEd[p.login]);
+  $('pesConta').textContent = `${lista.length} ${lista.length===1?'pessoa':'pessoas'}`;
+  if(!lista.length){ $('pesLista').innerHTML = `<div class="vazio">Ninguém ainda. Busque o nome acima para incluir.</div>`; return; }
+  $('pesLista').innerHTML = `<div class="lin cabecalho"><span class="k">Pessoa</span><span class="k">Perfil</span><span class="k" style="grid-column:span 2">O que ela vê e edita</span><span></span></div>` +
     lista.map(p => {
       const cab = `<div><div>${esc(p.nome)}</div><div class="mut">${esc(p.cargo||p.login)}</div></div>`;
-      if(p.adminMod) return `<div class="lin">${cab}<div class="mut">Administração</div><div class="mut" style="grid-column:span 3">Vê e edita tudo (administra o Saint Center).</div></div>`;
-      const pf = perfilAtual(p);
-      const opc = `<option value="fora" ${pf==='fora'?'selected':''}>Sem acesso ao sistema</option>` + PERFIS.filter(x => x[0]!=='nenhum').map(([k,t]) => `<option value="${k}" ${pf===k?'selected':''}>${t}</option>`).join('') + `<option value="custom" ${pf==='custom'||pf==='nenhum'?'selected':''}>Personalizado</option>`;
-      const desc = pf==='fora' ? `<div class="mut">Não aparece no menu dela.</div>` : (pf==='custom'||pf==='nenhum') ? `<div class="pers">${sel(p.login,'ra')}${sel(p.login,'lentes')}${sel(p.login,'relatorio')}</div>` : `<div class="mut">${PERFIS.find(x=>x[0]===pf)[3]}</div>`;
-      return `<div class="lin${pf==='fora'?' fora':''}">${cab}<select data-perfil="${esc(p.login)}" aria-label="Acesso de ${esc(p.nome)}">${opc}</select><div style="grid-column:span 3">${desc}</div></div>`;
+      if(p.adminMod) return `<div class="lin">${cab}<div class="mut">Administração</div><div class="mut" style="grid-column:span 2">Vê e edita tudo (administra o Saint Center).</div><div></div></div>`;
+      const pf = (S.cfgCustom||{})[p.login] ? 'custom' : perfilDe(ac[p.login]);
+      const opc = PERFIS.filter(x => x[0]!=='nenhum').map(([k,t]) => `<option value="${k}" ${pf===k?'selected':''}>${t}</option>`).join('') + `<option value="custom" ${pf==='custom'||pf==='nenhum'?'selected':''}>Personalizado</option>`;
+      const desc = (pf==='custom'||pf==='nenhum') ? `<div class="pers">${sel(p.login,'ra')}${sel(p.login,'lentes')}${sel(p.login,'relatorio')}</div>` : `<div class="mut">${PERFIS.find(x=>x[0]===pf)[3]}</div>`;
+      return `<div class="lin">${cab}<select data-perfil="${esc(p.login)}" aria-label="Perfil de ${esc(p.nome)}">${opc}</select><div style="grid-column:span 2">${desc}</div><div style="text-align:right"><button type="button" class="ghost rm" data-remover="${esc(p.login)}">Remover</button></div></div>`;
     }).join('');
 }
+$('pesAchados').addEventListener('click', e => {
+  const b = e.target.closest('[data-incluir]'); if(!b) return; const login = b.dataset.incluir;
+  S.acessoEd[login] = true; if(S.cfgCustom) delete S.cfgCustom[login];
+  S.cfgEd.acessos[login] = Object.assign({}, PERFIS.find(x=>x[0]===b.dataset.pf)[2]);
+  $('pesBusca').value = ''; desenharPessoasCfg(); pendente();
+});
+$('pesAtualizar').onclick = () => { S.recarregar = true; montarCfg(); };
 $('pesBusca').addEventListener('input', desenharPessoasCfg);
-$('pesSo').addEventListener('change', desenharPessoasCfg);
 $('pesLista').addEventListener('change', e => {
   const s1 = e.target.closest('select[data-login]');
   if(s1){ const a = S.cfgEd.acessos; a[s1.dataset.login] = Object.assign({ra:'',lentes:'',relatorio:''}, a[s1.dataset.login], {[s1.dataset.k]: s1.value}); return pendente(); }
   const s = e.target.closest('select[data-perfil]'); if(!s) return; const login = s.dataset.perfil;
   S.cfgCustom = S.cfgCustom || {};
-  if(s.value === 'fora'){ S.acessoEd[login] = false; delete S.cfgCustom[login]; S.cfgEd.acessos[login] = {ra:'',lentes:'',relatorio:''}; }
-  else if(s.value === 'custom'){ S.acessoEd[login] = true; S.cfgCustom[login] = true; }
+  if(s.value === 'custom'){ S.acessoEd[login] = true; S.cfgCustom[login] = true; }
   else { S.acessoEd[login] = true; delete S.cfgCustom[login]; S.cfgEd.acessos[login] = Object.assign({}, PERFIS.find(x=>x[0]===s.value)[2]); }
+  desenharPessoasCfg(); pendente();
+});
+$('pesLista').addEventListener('click', e => {
+  const b = e.target.closest('[data-remover]'); if(!b) return; const login = b.dataset.remover;
+  S.acessoEd[login] = false; if(S.cfgCustom) delete S.cfgCustom[login]; S.cfgEd.acessos[login] = {ra:'',lentes:'',relatorio:''};
   desenharPessoasCfg(); pendente();
 });
 function pendente(){ msg('mCfg','Alterações não salvas.'); $('barraSalvar').classList.add('pend'); }
