@@ -53,6 +53,9 @@ textarea{resize:vertical;min-height:90px}
 .mot b{font-weight:400;font-size:20px;min-width:28px;text-align:right}
 .mot .mais{font-size:11px;letter-spacing:.14em;color:var(--g2)}
 .mot.tem{background:var(--soft)}
+.motw{display:flex;min-width:0}.motw .mot{flex:1;min-width:0}
+.menos{width:46px;flex:none;border:1px solid var(--g3);border-left:0;background:var(--bg);color:var(--fg);font-size:22px;padding:0;letter-spacing:0}
+.menos:hover:not(:disabled){border-color:var(--fg)}
 .ra-extra{display:grid;grid-template-columns:120px 1fr;gap:10px;margin-bottom:14px}
 .lista .lin{display:grid;grid-template-columns:70px minmax(0,1.2fr) 50px minmax(0,1.4fr) minmax(0,1fr) 70px;gap:12px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--soft);font-size:14px}
 .lista .lin.cabecalho{border-bottom:1px solid var(--g3)}
@@ -505,7 +508,7 @@ function desenharRA(){
   $('raSrSelo').className = 'selo ' + (ri._em ? 'ok' : 'pend'); $('raSrSelo').textContent = ri._em ? quando(ri) : 'Não informado hoje';
   $('raEdita').hidden = !edita; $('raNovo').hidden = !(edita && S.p.incluirMotivo);
   const motivos = S.motivosRA.slice(); Object.keys(c).forEach(m => { if(!motivos.includes(m)) motivos.push(m); });
-  $('raMotivos').innerHTML = motivos.map(m => `<button type="button" class="mot${c[m]?' tem':''}" data-mot="${esc(m)}" ${edita?'':'disabled'}><span>${esc(m)}${edita?'<br><span class="mais">+ lançar</span>':''}</span><b>${c[m]||0}</b></button>`).join('');
+  $('raMotivos').innerHTML = motivos.map(m => `<div class="motw"><button type="button" class="mot${c[m]?' tem':''}" data-mot="${esc(m)}" ${edita?'':'disabled'}><span>${esc(m)}${edita?'<br><span class="mais">+ lançar</span>':''}</span><b>${c[m]||0}</b></button>${edita && c[m] ? `<button type="button" class="menos" data-menos="${esc(m)}" title="Tirar 1" aria-label="Tirar 1 de ${esc(m)}">−</button>` : ''}</div>`).join('');
   $('raLista').innerHTML = !lanc.length ? `<div class="vazio">Nenhuma reclamação lançada em ${br(S.data)}.</div>` :
     `<div class="lin cabecalho"><span class="k">Hora</span><span class="k">Motivo</span><span class="k">Qtd</span><span class="k so-largo">Observação</span><span class="k so-largo">Por</span><span></span></div>` +
     lanc.slice().sort((a,b) => String(b.em).localeCompare(String(a.em))).map(l => `<div class="lin"><span>${hora(l.em)}</span><span>${esc(l.motivo)}</span><span>${l.qtd}</span><span class="mut so-largo">${esc(l.obs)}</span><span class="mut so-largo">${esc(l.por)}</span><span>${edita?`<button type="button" class="ghost" data-apaga="${esc(l.id)}">Apagar</button>`:''}</span></div>`).join('');
@@ -530,6 +533,23 @@ $('raMotivos').addEventListener('click', async e => {
   msg('mRA', `Lançando ${qtd} · ${motivo}…`);
   try{ S.dia.ra = await call('raAdicionar', S.data, motivo, qtd, obs); msg('mRA', `${qtd} · ${motivo} lançado.`, 'ok'); }
   catch(er){ S.dia.ra = (S.dia.ra||[]).filter(l => l.id !== tmp.id); msg('mRA', er.message, 'erro'); }
+  desenharRA(); desenharRelatorio();
+});
+/* − no motivo: tira 1 do último lançamento desse motivo */
+$('raMotivos').addEventListener('click', async e => {
+  const b = e.target.closest('[data-menos]'); if(!b || S.p.ra !== 'editar') return;
+  const motivo = b.dataset.menos, data = S.data;
+  const l = (S.dia.ra||[]).filter(x => x.motivo === motivo && String(x.id).indexOf('tmp') !== 0).sort((a,z) => String(z.em).localeCompare(String(a.em)))[0];
+  if(!l) return msg('mRA', 'Espere o último lançamento terminar de salvar e tente de novo.', 'erro');
+  const antes = S.dia.ra;
+  S.dia.ra = l.qtd > 1 ? antes.map(x => x.id === l.id ? Object.assign({}, x, { qtd: x.qtd - 1, id: 'tmp' + x.id }) : x) : antes.filter(x => x.id !== l.id);
+  desenharRA(); desenharRelatorio(); msg('mRA', `Tirando 1 de ${motivo}…`);
+  try{
+    let r = await call('raRemover', data, l.id);
+    if(l.qtd > 1) r = await call('raAdicionar', data, motivo, l.qtd - 1, l.obs);
+    if(data === S.data) S.dia.ra = r;
+    msg('mRA', `${motivo}: tirei 1.`, 'ok');
+  }catch(er){ if(data === S.data) S.dia.ra = antes; msg('mRA', er.message, 'erro'); }
   desenharRA(); desenharRelatorio();
 });
 $('raNovoBtn').onclick = async () => {
