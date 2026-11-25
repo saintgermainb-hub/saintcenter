@@ -576,7 +576,7 @@ const LEN_CAMPOS = [
   ['g1','Finalizadas hoje'],
   ['prime','Finalizadas · Prime'],
   ['iguacu','Finalizadas · Iguaçu'],
-  ['repro','Finalizadas · Reprocessamento'],
+  ['repro','Finalizadas · Repro'],
   ['=feitas','Total finalizadas hoje'],
   ['g2','Ainda a fazer'],
   ['tratativa','Em tratativa com o cliente'],
@@ -821,7 +821,7 @@ function montarRelatorio(){
   // lentes
   const feitas = l ? lenFeitas(l) : null;
   const partes = [];
-  if(l){ if(num(l.prime)) partes.push(`${num(l.prime)} do Prime`); if(num(l.iguacu)) partes.push(`${num(l.iguacu)} do Iguaçu`); if(num(l.repro)) partes.push(`${num(l.repro)} de reprocessamento`); }
+  if(l){ if(num(l.prime)) partes.push(`${num(l.prime)} do Prime`); if(num(l.iguacu)) partes.push(`${num(l.iguacu)} do Iguaçu`); if(num(l.repro)) partes.push(`${num(l.repro)} do Repro`); }
   const notaLen = l && partes.length ? `Das ${feitas} finalizadas, ${partes.length>1 ? partes.slice(0,-1).join(', ')+' e '+partes[partes.length-1] : partes[0]}.` : (l ? '' : 'Números de lentes ainda não preenchidos.');
   const lk = (lab, v, cor) => `<div><div class="l">${lab}</div><div class="n" style="color:${v==null?'#77777d':cor}">${fmt(v)}</div></div>`;
   const semMotivoSub = num(s.emBranco) ? ` · ${s.emBranco} em branco` : '';
