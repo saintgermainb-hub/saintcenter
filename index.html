@@ -415,6 +415,7 @@ function aplicarSistemas(lista){
   AREAS = [...new Set(MODULOS.map(m => m.area))];
 }
 aplicarSistemas(MODULOS_PADRAO);
+try{ const c = JSON.parse(localStorage.getItem('sc-sistemas') || 'null'); if(Array.isArray(c) && c.length) aplicarSistemas(c); }catch(_){} // última lista salva: a tela abre sem esperar o servidor
 const MODELOS = {
   coordenacao:{ admin:true,  perms:{lentes:'admin', coordenacao:'admin', acessos:'admin', saintacademy:'admin'} },
   supervisao: { admin:false, perms:{lentes:'equipe', coordenacao:'equipe', acessos:'equipe', saintacademy:'equipe'} },
@@ -551,16 +552,38 @@ $('fPrimeira').addEventListener('submit', async e => {
 const meus = () => MODULOS.filter(m => S.eu && S.eu.perms && S.eu.perms[m.k]);
 
 async function carregarSistemas(){
-  try{ const l = await run('listarSistemas'); if(Array.isArray(l) && l.length) aplicarSistemas(l); S.sisServidor = true; }
+  try{
+    const l = await run('listarSistemas');
+    if(Array.isArray(l) && l.length){ aplicarSistemas(l); try{ localStorage.setItem('sc-sistemas', JSON.stringify(l)); }catch(_){} }
+    S.sisServidor = true;
+  }
   catch(_){ S.sisServidor = false; } // servidor ainda sem a função: usa a lista padrão
 }
-async function entrarApp(){
-  await carregarSistemas();
+/* Abre na hora com o que já está guardado neste aparelho; o servidor confere em segundo plano e a tela se ajusta sozinha. */
+function entrarApp(){
   $('vLogin').hidden = true; $('vApp').hidden = false;
+  desenharEu();
+  const pedida = location.hash || '#/inicio';
+  irPara(pedida);
+  carregarSistemas().then(() => {
+    atualizarTela();
+    if(S.rota === '#/inicio' && pedida !== '#/inicio') irPara(pedida); // sistema novo que a lista guardada ainda não tinha
+    else if(S.rota === '#/sistemas') desenharSistemas();
+  });
+}
+function desenharEu(){
   $('euNome').textContent = S.eu.nome;
   $('euCargo').textContent = S.eu.cargo || (S.eu.centerAdmin ? 'Administração' : '');
   montarMenu(); montarInicio();
-  irPara(location.hash || '#/inicio');
+}
+function atualizarTela(){
+  if(!S.eu) return;
+  desenharEu();
+  const m = /^#\/m\/([a-z0-9]+)/.exec(S.rota || '');
+  const perdeu = m ? !MODULOS.some(x => x.k === m[1] && S.eu.perms[x.k] && !x.breve)
+                   : (/^#\/(pessoas|acessos|sistemas)$/.test(S.rota || '') && !S.eu.centerAdmin);
+  if(perdeu) irPara('#/inicio');
+  else document.querySelectorAll('#menu a').forEach(a => a.getAttribute('data-rota')===S.rota ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
 }
 
 function montarMenu(){
@@ -908,6 +931,17 @@ $('btnAtuHist').onclick = carregarHist;
 (async function iniciar(){
   try{
     const t = localStorage.getItem('sc-token');
+    let u = null; try{ u = JSON.parse(localStorage.getItem('sc-user') || 'null'); }catch(_){}
+    if(t && u && u.nome && u.perms){
+      // já entrou neste aparelho: abre na hora e confere a sessão em segundo plano
+      S.token = t; S.eu = u;
+      entrarApp();
+      call('eu', t).then(r => {
+        if(r.trocar){ sairLocal('Entre de novo com a sua senha temporária para criar a nova senha.'); return; }
+        guardar(Object.assign({token:t}, r)); atualizarTela();
+      }).catch(e => { if(/sess[aã]o expirou|desativado/i.test(e.message)) sairLocal(e.message); });
+      return;
+    }
     if(t){
       S.token = t;
       const r = await call('eu', t);

@@ -425,10 +425,13 @@ function bloqueio(tit, txt, link){
 }
 
 /* ===== Início ===== */
+let diaAdiantado = null;
 (async function iniciar(){
   try{ S.token = localStorage.getItem('sc-token') || ''; }catch(_){}
   if(!S.token) return bloqueio('Entre pelo Saint Center','O Relatório Diário usa o mesmo login do Saint Center.', true);
   $('bloqueio').hidden = false; $('bloqueio').textContent = 'Carregando…';
+  diaAdiantado = { data:S.data, p:call('dia', S.data) }; // busca o dia junto com o início, em vez de esperar um pelo outro
+  diaAdiantado.p.catch(() => {});
   try{
     const r = await call('iniciar');
     Object.assign(S, { eu:r.eu, p:r.p, admin:r.admin, motivosRA:r.motivosRA||[], cfg:r.config||null });
@@ -474,7 +477,8 @@ async function carregarDia(){
   const meu = ++pedido;
   $('carregando').hidden = false;
   try{
-    const d = await call('dia', S.data);
+    const ad = diaAdiantado; diaAdiantado = null;
+    const d = await (ad && ad.data === S.data ? ad.p : call('dia', S.data));
     if(meu !== pedido) return;
     S.dia = d;
   }catch(e){ if(meu===pedido){ $('carregando').hidden = true; msg('mRA', e.message, 'erro'); msg('mLen', e.message, 'erro'); msg('mRel', e.message, 'erro'); } return; }

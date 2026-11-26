@@ -79,8 +79,12 @@
     enviando = false;
     if(deNovo){ deNovo = false; enviar(); }
   }
+  let puxando = false, ultimaPuxada = 0;
+  const naTela = () => { if(document.visibilityState !== 'visible') return false; try{ if(window.frameElement && window.frameElement.hidden) return false; }catch(_){} return true; };
   async function puxar(forcar){
-    if(pausado || enviando || (!forcar && ocupado())) return;
+    if(pausado || enviando || puxando || (!forcar && ocupado())) return;
+    if(!forcar && (!naTela() || Date.now() - ultimaPuxada < 20000)) return; // foco + volta à aba disparavam duas puxadas seguidas
+    puxando = true; ultimaPuxada = Date.now();
     try{
       const s = await call('agendaLer');
       if(!s.dados){ enviar(); return; }                         // primeira vez: leva esta agenda para o servidor
@@ -91,6 +95,7 @@
       if(JSON.stringify(junto) !== JSON.stringify(DB)) aplicar(junto);
       if(JSON.stringify(junto) !== s.dados) enviar(); else estado('ok', 'Sincronizado');
     }catch(e){ falhou(e); }
+    finally{ puxando = false; }
   }
   function falhou(e){
     const m = String(e && e.message || '');
@@ -105,7 +110,7 @@
 
   if(!token()){ estado('', 'Só neste aparelho'); return; }
   puxar(true);
-  setInterval(() => { if(document.visibilityState === 'visible') puxar(false); }, 45000);
-  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') puxar(false); });
+  setInterval(() => { if(Date.now() - ultimaPuxada >= 45000) puxar(false); }, 10000); // a cada 45 s, só com a agenda na tela
+  document.addEventListener('visibilitychange', () => puxar(false));
   window.addEventListener('focus', () => puxar(false));
 })();
