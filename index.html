@@ -54,6 +54,8 @@ nav a{display:flex;justify-content:space-between;align-items:center;gap:10px;pad
 nav a:hover{color:var(--fg);background:var(--soft)}
 nav a[aria-current="page"]{color:var(--fg);border-left-color:var(--fg);background:var(--soft)}
 nav a .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--g3)}
+.novos{display:inline-block;min-width:18px;padding:1px 6px;background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:0;text-align:center;margin-left:8px}
+.card .avisos-novos{font-size:10px;letter-spacing:.2em;text-transform:uppercase;background:var(--fg);color:var(--bg);padding:3px 7px}
 .lateral-pe{border-top:1px solid var(--g3);padding:18px 26px 22px;display:grid;gap:4px}
 .lateral-pe .quem{font-size:14px}
 .lateral-pe .cargo{font-size:12px;color:var(--g2);margin-bottom:6px}
@@ -380,6 +382,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" defer></script>
+<script src="mural/config.js?v=1"></script>
 <script>
 /* ===== Configuração ===== */
 const API = 'https://script.google.com/macros/s/AKfycbyWR9ceeCuNbgk_yjyzn-8mCQwCgpSVpFrn3gvsS2HGniMxP14pNNmVIRXLGqP8_F3g/exec'; // link do app do Apps Script "Saint Center" (termina em /exec)
@@ -549,7 +552,10 @@ $('fPrimeira').addEventListener('submit', async e => {
 });
 
 /* ===== App ===== */
-const meus = () => MODULOS.filter(m => S.eu && S.eu.perms && S.eu.perms[m.k]);
+/* O Mural de Avisos aparece para todo mundo que entra no Saint Center (o time só lê; quem publica é definido no servidor do mural). */
+const paraTodos = m => /^mural/.test(m.k);
+const temAcesso = m => !!(S.eu && S.eu.perms && (S.eu.perms[m.k] || paraTodos(m)));
+const meus = () => MODULOS.filter(temAcesso);
 
 async function carregarSistemas(){
   try{
@@ -569,8 +575,23 @@ function entrarApp(){
     atualizarTela();
     if(S.rota === '#/inicio' && pedida !== '#/inicio') irPara(pedida); // sistema novo que a lista guardada ainda não tinha
     else if(S.rota === '#/sistemas') desenharSistemas();
+    muralResumo();
   });
 }
+/* quantos avisos novos a pessoa tem no Mural (aparece no menu e no card) */
+async function muralResumo(){
+  const api = window.MURAL_API || '';
+  if(!api || /COLE_AQUI/.test(api) || !S.token || !MODULOS.some(paraTodos)) return;
+  try{
+    const r = await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:'resumo',args:[S.token]})});
+    const j = await r.json(); if(j.ok && S.eu){ S.mural = j.resultado; atualizarTela(); }
+  }catch(_){}
+}
+window.addEventListener('message', ev => {
+  if(ev.origin !== location.origin || !ev.data || ev.data.saintCenter !== 'mural' || !S.eu) return;
+  S.mural = { novos: ev.data.novos || 0, urgentes: ev.data.urgentes || 0 }; atualizarTela();
+});
+setInterval(() => { if(document.visibilityState === 'visible' && S.eu && !S.frames[(MODULOS.find(paraTodos)||{}).k]) muralResumo(); }, 5 * 60000);
 function desenharEu(){
   $('euNome').textContent = S.eu.nome;
   $('euCargo').textContent = S.eu.cargo || (S.eu.centerAdmin ? 'Administração' : '');
@@ -580,7 +601,7 @@ function atualizarTela(){
   if(!S.eu) return;
   desenharEu();
   const m = /^#\/m\/([a-z0-9]+)/.exec(S.rota || '');
-  const perdeu = m ? !MODULOS.some(x => x.k === m[1] && S.eu.perms[x.k] && !x.breve)
+  const perdeu = m ? !MODULOS.some(x => x.k === m[1] && temAcesso(x) && !x.breve)
                    : (/^#\/(pessoas|acessos|sistemas)$/.test(S.rota || '') && !S.eu.centerAdmin);
   if(perdeu) irPara('#/inicio');
   else document.querySelectorAll('#menu a').forEach(a => a.getAttribute('data-rota')===S.rota ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
@@ -593,7 +614,7 @@ function montarMenu(){
     const ms = lista.filter(m => m.area === a);
     if(!ms.length) return;
     h += `<div class="grupo">${esc(a)}</div>`;
-    ms.forEach(m => h += `<a href="#/m/${m.k}" data-rota="#/m/${m.k}">${esc(m.nome)}${m.breve?'<span class="tag">Em breve</span>':''}</a>`);
+    ms.forEach(m => h += `<a href="#/m/${m.k}" data-rota="#/m/${m.k}">${esc(m.nome)}${m.breve?'<span class="tag">Em breve</span>':''}${paraTodos(m) && S.mural && S.mural.novos ? `<span class="novos" title="Avisos novos">${S.mural.novos}</span>` : ''}</a>`);
   });
   if(S.eu.centerAdmin){
     h += `<div class="grupo">Administração</div>
@@ -618,11 +639,11 @@ function montarInicio(){
     const ms = lista.filter(m => m.area === a);
     if(!ms.length) return '';
     return `<section class="area"><span class="k">${esc(a)}</span><div class="cards">` + ms.map(m => {
-      const nivel = m.niveis[S.eu.perms[m.k]] || '';
+      const nivel = m.niveis[S.eu.perms[m.k]] || (paraTodos(m) ? m.niveis.equipe : '');
       if(m.breve) return `<div class="card breve"><h3>${esc(m.nome)}</h3><p>${esc(m.desc)}</p>
         <div class="pe"><span class="nivel">${esc(nivel)}</span><span class="abrir">Em breve</span></div></div>`;
       return `<a class="card" href="#/m/${m.k}"><h3>${esc(m.nome)}</h3><p>${esc(m.desc)}</p>
-        <div class="pe"><span class="nivel">${esc(nivel)}</span><span class="abrir">Abrir →</span></div></a>`;
+        <div class="pe">${paraTodos(m) && S.mural && S.mural.novos ? `<span class="avisos-novos">${S.mural.novos} ${S.mural.novos>1?'avisos novos':'aviso novo'}</span>` : `<span class="nivel">${esc(nivel)}</span>`}<span class="abrir">Abrir →</span></div></a>`;
     }).join('') + `</div></section>`;
   }).join('');
 }
@@ -631,7 +652,7 @@ function irPara(rota){
   document.body.classList.remove('menu-aberto'); $('btnMenu').setAttribute('aria-expanded','false');
   let alvo = 'inicio', mod = null;
   const m = /^#\/m\/([a-z0-9]+)/.exec(rota);
-  if(m){ mod = MODULOS.find(x => x.k === m[1] && S.eu.perms[x.k]); alvo = (mod && !mod.breve) ? 'modulo' : 'inicio'; }
+  if(m){ mod = MODULOS.find(x => x.k === m[1] && temAcesso(x)); alvo = (mod && !mod.breve) ? 'modulo' : 'inicio'; }
   else if(rota === '#/pessoas' && S.eu.centerAdmin) alvo = 'pessoas';
   else if(rota === '#/acessos' && S.eu.centerAdmin) alvo = 'acessos';
   else if(rota === '#/sistemas' && S.eu.centerAdmin) alvo = 'sistemas';

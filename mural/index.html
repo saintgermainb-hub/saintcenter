@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mural de Avisos · Saint Center</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="../favicon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&display=swap">
+<style>
+:root{--bg:#fff;--fg:#000;--g1:#414142;--g2:#5b5b60;--g3:#aea9b4;--soft:#f6f5f7;--font:"Questrial","Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+button{font-family:var(--font);font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--fg);background:var(--fg);color:var(--bg);padding:11px 16px;cursor:pointer;border-radius:0}
+button.ghost{background:transparent;color:var(--fg)}
+button.mini{padding:7px 10px;font-size:10px}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:1px solid var(--fg);outline-offset:2px}
+input,select,textarea{font-family:var(--font);font-size:15px;border:1px solid var(--g3);background:var(--bg);color:var(--fg);padding:10px 12px;border-radius:0;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--fg)}
+textarea{resize:vertical;min-height:180px;line-height:1.55}
+a{color:inherit}
+.k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--g2)}
+.mut{color:var(--g2);font-size:13px;line-height:1.55}
+.msg{font-size:13px;line-height:1.5;min-height:1em}
+.msg.erro{border-left:2px solid var(--fg);padding-left:10px}
+.msg.ok{color:var(--g1);border-left:2px solid var(--g3);padding-left:10px}
+.wrap{max-width:880px;margin:0 auto;padding:28px 28px 80px}
+.cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:1px solid var(--g3);padding-bottom:18px;margin-bottom:18px}
+.cab h1{font-weight:400;font-size:28px;letter-spacing:.04em;margin:6px 0 0}
+.cab .sub{margin-top:6px}
+
+.barra{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.abas{display:flex;border-bottom:1px solid var(--g3);flex:1 1 auto;overflow:auto}
+.abas button{background:none;color:var(--g2);border:0;border-bottom:2px solid transparent;padding:12px 14px;white-space:nowrap}
+.abas button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--fg)}
+.abas b{font-weight:400;display:inline-block;min-width:18px;padding:1px 6px;margin-left:6px;background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:0}
+.filtros{display:flex;gap:8px;flex:1 1 320px}
+.filtros select{max-width:190px}
+
+.aviso{border:1px solid var(--g3);margin-bottom:14px;background:var(--bg)}
+.aviso.importante{border-left:4px solid var(--fg)}
+.aviso.urgente{border-color:var(--fg)}
+.aviso.lido{border-color:#dcd9df}
+.aviso.lido.importante{border-left-color:var(--g3)}
+.aviso .faixa{background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:.24em;text-transform:uppercase;padding:7px 18px}
+.aviso.lido .faixa{background:var(--g2)}
+.aviso .corpo{padding:18px 20px 16px}
+.aviso .tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.tag{font-size:10px;letter-spacing:.18em;text-transform:uppercase;border:1px solid var(--g3);padding:3px 7px;color:var(--g1)}
+.tag.cheia{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tag.novo{border-color:var(--fg);color:var(--fg)}
+.aviso h2{font-weight:400;font-size:20px;letter-spacing:.02em;margin:0 0 10px;line-height:1.3}
+.aviso .texto{line-height:1.65;white-space:normal;overflow-wrap:anywhere}
+.aviso .texto.curto{max-height:9.6em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.aviso .mais{background:none;border:0;color:var(--fg);padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.aviso .link{display:inline-block;margin-top:10px;font-size:13px;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.aviso .pe{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--soft);margin-top:14px;padding-top:12px}
+.aviso .acoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cienteok{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--g1)}
+.cienteok::before{content:"✓  "}
+.leit{background:none;border:0;color:var(--g1);padding:4px 0;text-decoration:underline;text-underline-offset:3px;letter-spacing:.08em}
+.arq{opacity:.6}
+
+.vazio{border:1px dashed var(--g3);padding:40px 22px;text-align:center;color:var(--g2);line-height:1.6}
+.carregando{color:var(--g2);font-size:13px;padding:6px 0 14px}
+.bloqueio{max-width:440px;margin:80px auto;text-align:center;line-height:1.7;color:var(--g1)}
+
+dialog{border:0;padding:0;max-width:680px;width:calc(100% - 24px);max-height:calc(100% - 24px)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+.dlg{display:grid;gap:14px;padding:26px}
+.dlg h3{font-weight:400;font-size:22px;margin:4px 0 0;letter-spacing:.02em}
+.campo{display:grid;gap:6px}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;border:1px solid var(--g3);width:max-content;max-width:100%}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:10px 14px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;color:var(--g2)}
+.seg input:checked+span{background:var(--fg);color:var(--bg)}
+.seg input:focus-visible+span{outline:1px solid var(--fg);outline-offset:-3px}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;cursor:pointer}
+.check input{width:auto}
+.rodape-dlg{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.colunas{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.colunas ul{list-style:none;margin:8px 0 0;padding:0;max-height:50vh;overflow:auto}
+.colunas li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--soft);font-size:14px}
+@media (max-width:640px){
+  .wrap{padding:20px 16px 70px}
+  .grade2,.colunas{grid-template-columns:1fr}
+  .filtros select{max-width:none}
+}
+</style>
+</head>
+<body>
+<div id="bloqueio" class="bloqueio">Carregando…</div>
+
+<div class="wrap" id="app" hidden>
+  <div class="cab">
+    <div>
+      <div class="k">Saint Germain · Comunicação do time</div>
+      <h1>Mural de Avisos</h1>
+      <div class="mut sub" id="quem"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="ghost" id="btnAtualizar">Atualizar</button>
+      <button type="button" id="btnNovo" hidden>Novo aviso</button>
+    </div>
+  </div>
+
+  <div class="barra">
+    <div class="abas" role="tablist" id="abas"></div>
+  </div>
+  <div class="barra">
+    <div class="filtros">
+      <input id="q" type="search" placeholder="Buscar nos avisos" aria-label="Buscar nos avisos">
+      <select id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option></select>
+    </div>
+  </div>
+  <div class="carregando" id="carregando" hidden>Atualizando…</div>
+  <div class="msg" id="mGeral" role="status"></div>
+  <div id="lista"></div>
+</div>
+
+<dialog id="dlgAviso">
+  <form class="dlg" id="fAviso" method="dialog">
+    <div><span class="k" id="daK">Novo aviso</span><h3 id="daTitulo">Publicar no mural</h3></div>
+    <label class="campo"><span class="k">Título</span><input id="aTitulo" required maxlength="160" placeholder="ex.: Mudança no processo de troca a partir de segunda"></label>
+    <div class="grade2">
+      <label class="campo"><span class="k">Categoria</span><select id="aCat"></select></label>
+      <label class="campo"><span class="k">Mostrar até (opcional)</span><input id="aExpira" type="date"></label>
+    </div>
+    <div>
+      <span class="k">Prioridade</span>
+      <div class="seg" role="radiogroup" aria-label="Prioridade" style="margin-top:8px">
+        <label><input type="radio" name="aPri" value="normal" checked><span>Normal</span></label>
+        <label><input type="radio" name="aPri" value="importante"><span>Importante</span></label>
+        <label><input type="radio" name="aPri" value="urgente"><span>Urgente</span></label>
+      </div>
+    </div>
+    <label class="campo"><span class="k">Aviso</span><textarea id="aTexto" required maxlength="8000" placeholder="Escreva o que o time precisa saber. Pode colar links."></textarea></label>
+    <label class="campo"><span class="k">Link (opcional)</span><input id="aLink" placeholder="Planilha, documento, vídeo…"></label>
+    <label class="check"><input type="checkbox" id="aFixar"> Fixar no topo do mural</label>
+    <div class="msg" id="mAviso" role="status"></div>
+    <div class="rodape-dlg">
+      <button type="button" class="ghost" id="aCancelar">Cancelar</button>
+      <button type="submit" id="aSalvar">Publicar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgLeit">
+  <div class="dlg">
+    <div><span class="k">Quem já leu</span><h3 id="dlTitulo"></h3></div>
+    <div id="dlCorpo" class="mut">Carregando…</div>
+    <p class="mut" style="margin:0">"Ainda não leram" mostra quem já abriu o mural pelo menos uma vez e ainda não marcou ciente neste aviso.</p>
+    <div class="rodape-dlg"><button type="button" id="dlFechar">Fechar</button></div>
+  </div>
+</dialog>
+
+<script src="config.js?v=1"></script>
+<script>
+const SC_CENTER = 'https://saintgermainb-hub.github.io/saintcenter/';
+const API = window.MURAL_API || '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const S = { token:'', eu:null, publica:false, avisos:[], lidos:{}, categorias:[], aba:'todos', q:'', cat:'', abertos:{}, editando:null, carregadoEm:0 };
+
+function msg(el, texto, tipo){ const m=$(el); m.textContent=texto||''; m.className='msg'+(texto&&tipo?' '+tipo:''); }
+function quando(iso){
+  if(!iso) return '';
+  const d = new Date(iso), hoje = new Date(), ontem = new Date(Date.now()-864e5);
+  const h = d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  if(d.toDateString()===hoje.toDateString()) return 'hoje às '+h;
+  if(d.toDateString()===ontem.toDateString()) return 'ontem às '+h;
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:d.getFullYear()===hoje.getFullYear()?undefined:'2-digit'})+' às '+h;
+}
+function textoRico(t){
+  return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g,'<br>');
+}
+
+async function call(fn, ...args){
+  if(!API || /COLE_AQUI/.test(API)) throw Object.assign(new Error('O servidor do Mural de Avisos ainda não foi configurado.'),{config:true});
+  const corpo = JSON.stringify({fn, args:[S.token, ...args]});
+  let ult;
+  for(let t=0;t<3;t++){
+    try{
+      const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:corpo});
+      const j = await r.json();
+      if(!j.ok){
+        const er = Object.assign(new Error(j.erro||'Erro inesperado.'),{servidor:true});
+        if(/grava[cç][oõ]es agora/i.test(er.message) && t<2){ ult=er; await new Promise(ok=>setTimeout(ok,1500+Math.random()*1500)); continue; }
+        if(/sess[aã]o expirou/i.test(er.message)){ try{ if(window.parent!==window) window.parent.postMessage({saintCenter:'sessao-expirou'}, location.origin); }catch(_){} }
+        throw er;
+      }
+      return j.resultado;
+    }catch(e){ if(e.servidor) throw e; ult=e; await new Promise(ok=>setTimeout(ok,1200)); }
+  }
+  throw (ult && ult.servidor) ? ult : new Error('Sem conexão com o servidor. Verifique a internet e tente de novo.');
+}
+function bloqueio(tit, txt, link){
+  $('app').hidden = true; $('bloqueio').hidden = false;
+  $('bloqueio').innerHTML = `<b>${esc(tit)}</b><br>${esc(txt)}${link?`<br><br><a href="${SC_CENTER}" target="_top">Abrir o Saint Center</a>`:''}`;
+}
+
+/* ===== dados ===== */
+const chaveCache = () => 'mural:' + (S.eu ? S.eu.login : (JSON.parse(localStorage.getItem('sc-user')||'{}').login || ''));
+function aplicar(r){
+  S.eu = r.eu; S.publica = !!r.publica; S.avisos = r.avisos || []; S.lidos = r.lidos || {}; S.categorias = r.categorias || [];
+  try{ localStorage.setItem(chaveCache(), JSON.stringify(r)); }catch(_){}
+  desenharTudo();
+}
+async function carregar(manual){
+  S.carregadoEm = Date.now();
+  $('carregando').hidden = false;
+  try{ aplicar(await call('iniciar')); if(manual) msg('mGeral','Mural atualizado.','ok'); else if(/Sem conexão/.test($('mGeral').textContent)) msg('mGeral',''); }
+  catch(e){
+    if(e.config) return bloqueio('Mural em preparação', 'O servidor do Mural de Avisos ainda não foi ligado. Assim que a coordenação terminar a instalação, ele aparece aqui.');
+    if(/sess[aã]o|desativado/i.test(e.message)) return bloqueio('Entre pelo Saint Center', e.message, true);
+    if(!S.eu) return bloqueio('Não foi possível abrir', e.message);
+    msg('mGeral', e.message, 'erro');
+  }
+  finally{ $('carregando').hidden = true; }
+}
+
+/* ===== desenho ===== */
+const naoLido = a => a.status==='ativo' && !S.lidos[a.id];
+function ordenar(l){
+  const pri = {urgente:0, importante:1, normal:2};
+  return l.slice().sort((a,b) =>
+    (b.fixado - a.fixado) || (naoLido(b) - naoLido(a)) ||
+    ((naoLido(a)&&naoLido(b)) ? (pri[a.prioridade]-pri[b.prioridade]) : 0) ||
+    (a.criadoEm < b.criadoEm ? 1 : -1));
+}
+function desenharTudo(){
+  $('bloqueio').hidden = true; $('app').hidden = false;
+  $('quem').textContent = S.eu.nome + (S.publica ? ' · pode publicar' : '');
+  $('btnNovo').hidden = !S.publica;
+  const ativos = S.avisos.filter(a => a.status==='ativo');
+  const nNovos = ativos.filter(naoLido).length;
+  const abas = [['todos','Todos'],['novos','Não lidos', nNovos],['fixados','Fixados']];
+  if(S.publica) abas.push(['arquivados','Arquivados']);
+  if(!abas.some(a => a[0]===S.aba)) S.aba = 'todos';
+  $('abas').innerHTML = abas.map(([k,t,n]) => `<button type="button" role="tab" data-aba="${k}" aria-selected="${S.aba===k}">${t}${n?`<b>${n}</b>`:''}</button>`).join('');
+  const cats = [...new Set(S.categorias.concat(S.avisos.map(a => a.categoria)))].filter(Boolean);
+  $('fCat').innerHTML = `<option value="">Todas as categorias</option>` + cats.map(c => `<option${c===S.cat?' selected':''}>${esc(c)}</option>`).join('');
+  try{ if(window.parent!==window) window.parent.postMessage({saintCenter:'mural', novos:nNovos, urgentes:ativos.filter(a=>naoLido(a)&&a.prioridade==='urgente').length}, location.origin); }catch(_){}
+  desenharLista();
+}
+function desenharLista(){
+  let l = S.avisos;
+  if(S.aba==='arquivados') l = l.filter(a => a.status!=='ativo');
+  else l = l.filter(a => a.status==='ativo');
+  if(S.aba==='novos') l = l.filter(naoLido);
+  if(S.aba==='fixados') l = l.filter(a => a.fixado);
+  if(S.cat) l = l.filter(a => a.categoria===S.cat);
+  if(S.q){ const q = norm(S.q); l = l.filter(a => norm(a.titulo+' '+a.texto+' '+a.categoria+' '+a.autorNome).includes(q)); }
+  l = ordenar(l);
+  if(!l.length){
+    const t = S.aba==='novos' ? 'Tudo lido por aqui. Quando sair aviso novo, ele aparece nesta aba.'
+      : S.q || S.cat ? 'Nenhum aviso encontrado com esse filtro.'
+      : S.aba==='arquivados' ? 'Nenhum aviso arquivado.'
+      : S.publica ? 'O mural ainda está vazio. Clique em "Novo aviso" para publicar o primeiro.' : 'Nenhum aviso no mural por enquanto.';
+    $('lista').innerHTML = `<div class="vazio">${esc(t)}</div>`; return;
+  }
+  $('lista').innerHTML = l.map(cartao).join('');
+  document.querySelectorAll('.texto[data-id]').forEach(el => {
+    if(S.abertos[el.dataset.id] || el.scrollHeight <= el.clientHeight + 4){ el.classList.remove('curto'); const b = el.nextElementSibling; if(b && b.classList.contains('mais')) b.hidden = true; }
+  });
+}
+function cartao(a){
+  const lido = S.lidos[a.id], novo = naoLido(a);
+  const faixa = a.prioridade==='urgente' ? `<div class="faixa">Urgente</div>` : '';
+  const tags = [
+    a.fixado ? `<span class="tag cheia">Fixado</span>` : '',
+    `<span class="tag">${esc(a.categoria)}</span>`,
+    a.prioridade==='importante' ? `<span class="tag">Importante</span>` : '',
+    novo ? `<span class="tag novo">Novo</span>` : '',
+    a.status!=='ativo' ? `<span class="tag">Arquivado</span>` : '',
+    a.expiraEm ? `<span class="mut">até ${esc(a.expiraEm.split('-').reverse().join('/'))}</span>` : ''
+  ].join('');
+  const autor = `<span class="mut">${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}</span>`;
+  const cienteHtml = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente · ${esc(quando(lido))}</span>`
+    : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
+  const pub = !S.publica ? '' : `
+    <button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>
+    <button type="button" class="ghost mini" data-fixar="${a.id}">${a.fixado?'Desafixar':'Fixar'}</button>
+    <button type="button" class="ghost mini" data-editar="${a.id}">Editar</button>
+    <button type="button" class="ghost mini" data-arquivar="${a.id}">${a.status==='ativo'?'Arquivar':'Voltar ao mural'}</button>`;
+  return `<article class="aviso ${esc(a.prioridade)}${lido?' lido':''}${a.status!=='ativo'?' arq':''}">${faixa}<div class="corpo">
+    <div class="tags">${tags}</div>
+    <h2>${esc(a.titulo)}</h2>
+    <div class="texto curto" data-id="${a.id}">${textoRico(a.texto)}</div>
+    <button type="button" class="mais" data-mais="${a.id}">Ler tudo</button>
+    ${a.link?`<a class="link" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir link →</a>`:''}
+    <div class="pe"><div>${autor}</div><div class="acoes">${cienteHtml}${pub}</div></div>
+  </div></article>`;
+}
+
+/* ===== ações ===== */
+$('abas').addEventListener('click', e => { const b = e.target.closest('[data-aba]'); if(!b) return; S.aba = b.dataset.aba; desenharTudo(); });
+$('q').addEventListener('input', e => { S.q = e.target.value; desenharLista(); });
+$('fCat').addEventListener('change', e => { S.cat = e.target.value; desenharLista(); });
+$('btnAtualizar').onclick = () => carregar(true);
+
+$('lista').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if(!b || b.disabled) return;
+  const d = b.dataset;
+  if(d.mais){ S.abertos[d.mais] = true; const t = document.querySelector(`.texto[data-id="${d.mais}"]`); if(t) t.classList.remove('curto'); b.hidden = true; return; }
+  if(d.leit) return abrirLeitores(d.leit);
+  if(d.editar) return abrirAviso(S.avisos.find(a => a.id===d.editar));
+  b.disabled = true;
+  try{
+    if(d.ciente){
+      b.textContent = 'Registrando…';
+      const r = await call('ciente', d.ciente);
+      S.lidos[r.id] = r.em;
+      const a = S.avisos.find(x => x.id===r.id); if(a && S.publica) a.leram = (a.leram||0)+1;
+      try{ const c = JSON.parse(localStorage.getItem(chaveCache())||'null'); if(c){ c.lidos = S.lidos; localStorage.setItem(chaveCache(), JSON.stringify(c)); } }catch(_){}
+      desenharTudo();
+    }
+    else if(d.fixar){ const a = S.avisos.find(x => x.id===d.fixar); aplicar(await call('fixar', d.fixar, !a.fixado)); }
+    else if(d.arquivar){
+      const a = S.avisos.find(x => x.id===d.arquivar);
+      aplicar(await call('arquivar', d.arquivar, a.status==='ativo'));
+      msg('mGeral', a.status==='ativo' ? 'Aviso arquivado. Ele fica na aba "Arquivados".' : 'Aviso de volta ao mural.', 'ok');
+    }
+  }catch(er){ msg('mGeral', er.message, 'erro'); b.disabled = false; if(d.ciente) b.textContent = 'Li e estou ciente'; }
+});
+
+function abrirAviso(a){
+  S.editando = a || null;
+  $('fAviso').reset(); msg('mAviso','');
+  $('daK').textContent = a ? 'Editar aviso' : 'Novo aviso';
+  $('daTitulo').textContent = a ? a.titulo : 'Publicar no mural';
+  $('aSalvar').textContent = a ? 'Salvar' : 'Publicar';
+  const cats = [...new Set(S.categorias.concat(a ? [a.categoria] : []))];
+  $('aCat').innerHTML = cats.map(c => `<option>${esc(c)}</option>`).join('');
+  if(a){
+    $('aTitulo').value = a.titulo; $('aTexto').value = a.texto; $('aCat').value = a.categoria;
+    $('aLink').value = a.link; $('aExpira').value = a.expiraEm; $('aFixar').checked = a.fixado;
+    const p = $('fAviso').querySelector(`input[name="aPri"][value="${a.prioridade}"]`); if(p) p.checked = true;
+  }
+  $('dlgAviso').showModal();
+  setTimeout(() => $('aTitulo').focus(), 30);
+}
+$('btnNovo').onclick = () => abrirAviso(null);
+$('aCancelar').onclick = () => $('dlgAviso').close();
+$('fAviso').addEventListener('submit', async e => {
+  e.preventDefault();
+  const dados = { titulo:$('aTitulo').value, texto:$('aTexto').value, categoria:$('aCat').value, link:$('aLink').value,
+    expiraEm:$('aExpira').value, fixado:$('aFixar').checked, prioridade:($('fAviso').querySelector('input[name="aPri"]:checked')||{}).value || 'normal' };
+  $('aSalvar').disabled = true; msg('mAviso', S.editando ? 'Salvando…' : 'Publicando…');
+  try{
+    aplicar(S.editando ? await call('editar', S.editando.id, dados) : await call('publicar', dados));
+    $('dlgAviso').close();
+    msg('mGeral', S.editando ? 'Aviso atualizado.' : 'Aviso publicado. O time vê na próxima vez que abrir o mural ou o Saint Center.', 'ok');
+    if(!S.editando){ S.aba = 'todos'; desenharTudo(); }
+  }catch(er){ msg('mAviso', er.message, 'erro'); }
+  $('aSalvar').disabled = false;
+});
+
+async function abrirLeitores(id){
+  const a = S.avisos.find(x => x.id===id);
+  $('dlTitulo').textContent = a ? a.titulo : '';
+  $('dlCorpo').innerHTML = 'Carregando…';
+  $('dlgLeit').showModal();
+  try{
+    const r = await call('leitores', id);
+    const li = l => l.length ? l.map(p => `<li><span>${esc(p.nome)}</span><span class="mut">${p.em?esc(quando(p.em)):esc(p.cargo||'')}</span></li>`).join('') : `<li class="mut">Ninguém</li>`;
+    $('dlCorpo').innerHTML = `<div class="colunas">
+      <div><span class="k">Leram · ${r.leram.length}</span><ul>${li(r.leram)}</ul></div>
+      <div><span class="k">Ainda não leram · ${r.faltam.length}</span><ul>${li(r.faltam)}</ul></div></div>`;
+  }catch(er){ $('dlCorpo').textContent = er.message; }
+}
+$('dlFechar').onclick = () => $('dlgLeit').close();
+
+/* ===== início ===== */
+(function iniciar(){
+  try{ S.token = localStorage.getItem('sc-token') || ''; }catch(_){}
+  if(!S.token) return bloqueio('Entre pelo Saint Center', 'O Mural de Avisos usa o mesmo login do Saint Center.', true);
+  try{ const c = JSON.parse(localStorage.getItem(chaveCache()) || 'null'); if(c && c.eu) aplicar(c); }catch(_){} // mostra na hora o último mural visto
+  carregar(false);
+})();
+function naTela(){
+  if(document.visibilityState !== 'visible') return false;
+  try{ if(window.frameElement && window.frameElement.hidden) return false; }catch(_){}
+  return !document.querySelector('dialog[open]');
+}
+setInterval(() => { if(S.token && naTela() && Date.now() - S.carregadoEm >= 120000) carregar(false); }, 15000);
+document.addEventListener('visibilitychange', () => { if(naTela() && Date.now() - S.carregadoEm >= 30000) carregar(false); });
+</script>
+</body>
+</html>
