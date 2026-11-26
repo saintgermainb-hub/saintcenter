@@ -54,6 +54,16 @@ nav a{display:flex;justify-content:space-between;align-items:center;gap:10px;pad
 nav a:hover{color:var(--fg);background:var(--soft)}
 nav a[aria-current="page"]{color:var(--fg);border-left-color:var(--fg);background:var(--soft)}
 nav a .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--g3)}
+#muralPop{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:12px;background:#fff2f6;border:3px solid #fde3ea;border-radius:26px;padding:10px 16px 10px 10px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.95),inset 0 -5px 10px rgba(214,110,145,.18),0 14px 30px -10px rgba(226,120,155,.6);cursor:pointer;max-width:330px;animation:popEntra .5s cubic-bezier(.2,1.4,.4,1)}
+#muralPop img{width:84px;flex:none;animation:popPula 1.4s ease-in-out infinite;transform-origin:50% 90%}
+#muralPop b{display:block;color:#ec7f9e;font-size:17px;line-height:1.2;font-weight:700}
+#muralPop span{display:block;color:#5c4651;font-size:12.5px;margin-top:3px}
+#muralPop .x{position:absolute;top:-10px;right:-10px;width:28px;height:28px;border-radius:50%;border:0;background:#ec7f9e;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}
+@keyframes popPula{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
+@keyframes popEntra{from{transform:translateY(30px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#muralPop,#muralPop img{animation:none}}
+@media (max-width:640px){#muralPop{right:12px;bottom:12px;left:12px;max-width:none}}
 @keyframes piscaNovos{0%,100%{background:var(--fg);box-shadow:0 0 0 0 rgba(255,92,184,0)}50%{background:#ff5cb8;box-shadow:0 0 0 4px rgba(255,92,184,.3)}}
 .novos,.card .avisos-novos{animation:piscaNovos 1.2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.novos,.card .avisos-novos{animation:none;background:#c2187a}}
@@ -477,6 +487,7 @@ function sairLocal(aviso){
   try{ localStorage.removeItem('sc-token'); localStorage.removeItem('sc-user'); }catch(_){}
   saLimpar();
   Object.values(S.frames).forEach(f=>f.remove()); S.frames={};
+  S.mural = null; const mp = $('muralPop'); if(mp) mp.remove();
   mostrarLogin('entrar');
   if(aviso) msg('mEntrar', aviso, 'erro');
 }
@@ -595,6 +606,25 @@ window.addEventListener('message', ev => {
   S.mural = { novos: ev.data.novos || 0, urgentes: ev.data.urgentes || 0 }; atualizarTela();
 });
 setInterval(() => { if(document.visibilityState === 'visible' && S.eu && !S.frames[(MODULOS.find(paraTodos)||{}).k]) muralResumo(); }, 5 * 60000);
+/* o mascote do Mural aparece quando há aviso novo (some dentro do próprio Mural) */
+function desenharMuralPop(){
+  const mod = MODULOS.find(paraTodos);
+  let el = $('muralPop');
+  const n = S.mural && S.mural.novos || 0;
+  const noMural = mod && S.rota === '#/m/' + mod.k;
+  let fechado = false; try{ fechado = sessionStorage.getItem('sc-mural-pop') === String(n); }catch(_){}
+  if(!mod || !n || noMural || fechado || !S.eu){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div'); el.id = 'muralPop'; el.setAttribute('role','button'); el.tabIndex = 0;
+    el.innerHTML = `<img src="mural/mascote.svg" alt=""><div><b></b><span></span></div><button type="button" class="x" aria-label="Fechar">×</button>`;
+    document.body.appendChild(el);
+    const ir = () => { location.hash = '#/m/' + mod.k; };
+    el.addEventListener('click', e => { if(e.target.closest('.x')){ e.stopPropagation(); try{ sessionStorage.setItem('sc-mural-pop', String(S.mural.novos)); }catch(_){} el.remove(); return; } ir(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') ir(); });
+  }
+  el.querySelector('b').textContent = n > 1 ? `Tem ${n} avisos novos!` : 'Tem aviso novo!';
+  el.querySelector('span').textContent = (S.mural.urgentes ? 'Tem aviso urgente. ' : '') + 'Toque para ler no Mural.';
+}
 function desenharEu(){
   $('euNome').textContent = S.eu.nome;
   $('euCargo').textContent = S.eu.cargo || (S.eu.centerAdmin ? 'Administração' : '');
@@ -602,7 +632,7 @@ function desenharEu(){
 }
 function atualizarTela(){
   if(!S.eu) return;
-  desenharEu();
+  desenharEu(); desenharMuralPop();
   const m = /^#\/m\/([a-z0-9]+)/.exec(S.rota || '');
   const perdeu = m ? !MODULOS.some(x => x.k === m[1] && temAcesso(x) && !x.breve)
                    : (/^#\/(pessoas|acessos|sistemas)$/.test(S.rota || '') && !S.eu.centerAdmin);
@@ -666,6 +696,7 @@ function irPara(rota){
   $('pgPessoas').hidden = alvo!=='pessoas'; $('pgAcessos').hidden = alvo!=='acessos'; $('pgSistemas').hidden = alvo!=='sistemas';
   document.querySelectorAll('#menu a').forEach(a => a.getAttribute('data-rota')===efetiva ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
   if(alvo==='modulo') abrirModulo(mod);
+  desenharMuralPop();
   if(alvo==='pessoas') carregarPessoas();
   if(alvo==='acessos') carregarHist();
   if(alvo==='sistemas') desenharSistemas();
@@ -681,7 +712,7 @@ function abrirModulo(m){
   if(!S.frames[m.k]){
     const f = document.createElement('iframe');
     f.title = m.nome; f.src = m.url + '?sc=1&v=' + Date.now(); // v= evita abrir versão antiga guardada no navegador
-    f.setAttribute('allow','clipboard-write');
+    f.setAttribute('allow','clipboard-write; microphone');
     $('frames').appendChild(f); S.frames[m.k] = f;
   }
 }
@@ -820,7 +851,7 @@ async function saApi(){
   if(!S.frames.saintacademy){
     const f = document.createElement('iframe');
     f.title = sis.nome; f.src = sis.url + '?sc=1&v=' + Date.now(); f.hidden = true;
-    f.setAttribute('allow','clipboard-write');
+    f.setAttribute('allow','clipboard-write; microphone');
     $('frames').appendChild(f); S.frames.saintacademy = f;
   }
   const f = S.frames.saintacademy;
