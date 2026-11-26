@@ -271,7 +271,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
         <div class="cab">
           <div><span class="k">Administração</span><h2>Pessoas e acessos</h2>
             <div class="sub">Um cadastro por pessoa. Aqui você define em quais sistemas ela entra e com qual nível.</div></div>
-          <button type="button" id="btnNova">Nova pessoa</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="ghost" id="btnReenviarTodos" hidden>Reenviar para quem não entrou</button>
+            <button type="button" id="btnNova">Nova pessoa</button>
+          </div>
         </div>
         <div class="ferramentas">
           <input id="busca" type="search" placeholder="Buscar por nome, login, cargo ou e-mail">
@@ -279,6 +282,7 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
             <option value="ativos">Ativas</option><option value="inativos">Desativadas</option><option value="todos">Todas</option>
           </select>
         </div>
+        <div class="msg" id="mPessoas" role="status" style="margin:0 0 12px"></div>
         <div class="tabela" id="tabPessoas"></div>
       </div>
     </div>
@@ -759,6 +763,9 @@ function desenharPessoas(){
   const lista = S.pessoas.filter(p => (st==='todos' || (st==='ativos') === p.ativo) &&
     (!q || norm([p.nome,p.login,p.cargo,p.email].join(' ')).includes(q)))
     .sort((a,b) => rankCargo(a.cargo)-rankCargo(b.cargo) || String(a.nome).localeCompare(String(b.nome),'pt-BR',{sensitivity:'base'}));
+  const pendentes = S.pessoas.filter(p => p.ativo && p.email && !p.ultimo);
+  $('btnReenviarTodos').hidden = !pendentes.length;
+  $('btnReenviarTodos').textContent = `Reenviar para quem não entrou (${pendentes.length})`;
   if(!lista.length){ $('tabPessoas').innerHTML = `<div class="vazio">Nenhuma pessoa encontrada.</div>`; return; }
   $('tabPessoas').innerHTML = `<div class="linha cabecalho"><span class="k">Pessoa</span><span class="k">Sistemas</span><span class="k">Status</span><span></span></div>` +
     lista.map(p => {
@@ -769,13 +776,37 @@ function desenharPessoas(){
         <div><div class="nome">${esc(p.nome)}</div><div class="mut">${esc(p.login)}${p.cargo?' · '+esc(p.cargo):''}</div><div class="mut">${esc(ult)}</div></div>
         <div class="chips">${chips || '<span class="mut">Sem sistemas</span>'}</div>
         <div class="status${p.ativo?'':' off'}">${p.ativo?'Ativa':'Desativada'}</div>
-        <div class="acoes"><button type="button" class="ghost" data-editar="${esc(p.login)}">Editar</button></div>
+        <div class="acoes">${p.email && p.ativo ? `<button type="button" class="ghost" data-reenviar="${esc(p.login)}" title="Envia uma senha temporária nova para ${esc(p.email)}">Reenviar senha</button>` : ''}<button type="button" class="ghost" data-editar="${esc(p.login)}">Editar</button></div>
       </div>`;
     }).join('');
 }
 $('busca').addEventListener('input', desenharPessoas);
 $('filtroStatus').addEventListener('change', desenharPessoas);
-$('tabPessoas').addEventListener('click', e => { const b = e.target.closest('[data-editar]'); if(b) abrirPessoa(S.pessoas.find(p => p.login === b.dataset.editar)); });
+$('tabPessoas').addEventListener('click', async e => {
+  const r = e.target.closest('[data-reenviar]');
+  if(r){
+    const p = S.pessoas.find(x => x.login === r.dataset.reenviar); if(!p || r.disabled) return;
+    r.disabled = true; r.textContent = 'Enviando…'; msg('mPessoas', '');
+    try{ msg('mPessoas', p.nome + ': ' + await run('enviarAcesso', p.login) + ' A senha anterior deixa de valer.', 'ok'); r.textContent = 'Enviado ✓'; }
+    catch(er){ msg('mPessoas', p.nome + ': ' + er.message, 'erro'); r.textContent = 'Reenviar senha'; r.disabled = false; }
+    return;
+  }
+  const b = e.target.closest('[data-editar]'); if(b) abrirPessoa(S.pessoas.find(p => p.login === b.dataset.editar));
+});
+/* reenvia a senha temporária para todo mundo ativo que ainda não entrou nenhuma vez */
+$('btnReenviarTodos').onclick = async () => {
+  const lista = S.pessoas.filter(p => p.ativo && p.email && !p.ultimo);
+  if(!lista.length) return;
+  if(!confirm(`Enviar uma senha temporária nova para ${lista.length} pessoa(s) que ainda não entraram?\nA senha enviada antes deixa de valer.`)) return;
+  const b = $('btnReenviarTodos'); b.disabled = true;
+  let ok = 0; const erros = [];
+  for(const [i,p] of lista.entries()){
+    msg('mPessoas', `Enviando ${i+1} de ${lista.length}: ${p.nome}…`);
+    try{ await run('enviarAcesso', p.login); ok++; }catch(er){ erros.push(p.nome + ' (' + er.message + ')'); }
+  }
+  msg('mPessoas', `Senha reenviada para ${ok} pessoa(s).` + (erros.length ? ' Não foi possível: ' + erros.join('; ') : ''), erros.length ? 'erro' : 'ok');
+  b.disabled = false; carregarPessoas();
+};
 $('btnNova').onclick = () => abrirPessoa(null);
 
 function desenharPerms(perms){
