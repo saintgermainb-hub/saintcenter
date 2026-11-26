@@ -88,9 +88,10 @@ a{color:inherit}
   box-shadow:inset 0 -4px 0 rgba(239,201,212,.55),0 8px 20px -10px rgba(214,110,145,.55);border:2px solid #fbe1e9;transition:transform .15s ease,box-shadow .15s ease}
 .nota:hover,.nota:focus-visible{transform:translateY(-3px);box-shadow:inset 0 -4px 0 rgba(239,201,212,.55),0 16px 26px -12px rgba(214,110,145,.7)}
 .nota:focus-visible{outline:3px solid var(--rosa2);outline-offset:2px}
-.nota .cat{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding-right:64px}
-.nota .cat span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--g1);background:color-mix(in srgb,var(--fita) 22%,#fff);padding:4px 10px;border-radius:999px}
-.nota .cat span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--fita)}
+.nota .cat{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.nota .cat .selos{font-style:normal;margin-left:auto;display:flex;gap:5px}
+.nota .cat>span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--g1);background:color-mix(in srgb,var(--fita) 22%,#fff);padding:4px 10px;border-radius:999px}
+.nota .cat>span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--fita)}
 .nota .cat i{font-style:normal;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:#fff0d6;color:#a0620f}
 .nota.urgente .cat i{background:#ffe0e4;color:#c0294d}
 .nota h2{font-family:var(--titulo);font-weight:600;font-size:19px;line-height:1.25;margin:0 0 8px;overflow-wrap:anywhere;color:var(--fg)}
@@ -98,9 +99,9 @@ a{color:inherit}
 .nota .assin{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:2px dotted var(--rosa3)}
 .nota .autor{font-size:12px;color:var(--g2);line-height:1.45}
 .nota .autor b{display:block;color:var(--fg);font-size:12.5px}
-.fita{position:absolute;top:16px;right:16px;background:#e8455f;color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;box-shadow:0 4px 10px -4px rgba(200,40,70,.8)}
-.carimbo{position:absolute;top:16px;right:16px;background:var(--rosa);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
-.nota.urgente .carimbo{top:44px}
+.nota .cat .fita,.nota .cat .carimbo{display:inline-block}
+.fita{background:#e8455f;color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;box-shadow:0 4px 10px -4px rgba(200,40,70,.8)}
+.carimbo{background:var(--rosa);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
 .nota.fixado::after{content:"📌";position:absolute;top:-10px;left:-6px;font-size:22px;transform:rotate(-18deg);filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))}
 .nota.lido{background:#fffafc}
 .cienteok{font-size:12px;font-weight:700;color:#2f9e5c;white-space:nowrap}
@@ -159,7 +160,7 @@ dialog::backdrop{background:rgba(120,60,85,.3);backdrop-filter:blur(2px)}
   .wrap{padding:18px 14px 70px}
   .logo{font-size:38px}
   .grade2,.colunas{grid-template-columns:1fr}
-  .mascote img{width:84px}.mascote b{font-size:20px}
+  .mascote{flex-wrap:wrap;padding:14px}.mascote img{width:84px}.mascote b{font-size:20px}.mascote .fala{flex:1 1 160px}.mascote>button{width:100%}
   .balao{padding:18px 14px 22px;border-radius:26px}
   .chips select{margin-left:0;width:100%}
 }
@@ -383,9 +384,7 @@ function cartao(a){
     : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
   const pend = a.status==='ativo' && (a.faltam > 0 || novo);
   return `<article class="nota ${esc(a.prioridade)}${a.fixado?' fixado':''}${lido?' lido':''}${a.status!=='ativo'?' arq':''}${pend?' pendente':''}${novo?' meu':''}" style="--fita:${a.prioridade==='urgente'?'#d7263d':papel(a.categoria)}" tabindex="0" data-ler="${a.id}" aria-label="${esc(a.titulo)}">
-    ${a.prioridade==='urgente' ? `<span class="fita">Urgente</span>` : ''}
-    ${novo ? `<span class="carimbo">Novo</span>` : ''}
-    <div class="cat"><span>${esc(a.categoria)}</span>${a.prioridade==='importante'?'<i>Importante</i>':''}${a.status!=='ativo'?'<i>Arquivado</i>':''}</div>
+    <div class="cat"><span>${esc(a.categoria)}</span>${a.prioridade==='importante'?'<i>Importante</i>':''}${a.status!=='ativo'?'<i>Arquivado</i>':''}<em class="selos">${a.prioridade==='urgente' ? `<span class="fita">Urgente</span>` : ''}${novo ? `<span class="carimbo">Novo</span>` : ''}</em></div>
     <h2>${esc(a.titulo)}</h2>
     <div class="resumo">${resumoTexto(a.texto)}</div>
     <div class="assin"><div class="autor"><b>${esc(a.autorNome)}</b>${esc(quando(a.criadoEm))}${dataBR(a.expiraEm)?` · até ${esc(dataBR(a.expiraEm))}`:''}</div>${ciente}</div>
