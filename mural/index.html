@@ -11,7 +11,7 @@
 :root{--bg:#fff;--fg:#000;--g1:#414142;--g2:#5b5b60;--g3:#aea9b4;--soft:#f6f5f7;--font:"Questrial","Helvetica Neue",Arial,sans-serif}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+html,body{margin:0;background:#fbfaf8;color:var(--fg);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
 button{font-family:var(--font);font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--fg);background:var(--fg);color:var(--bg);padding:11px 16px;cursor:pointer;border-radius:0}
 button.ghost{background:transparent;color:var(--fg)}
 button.mini{padding:7px 10px;font-size:10px}
@@ -26,7 +26,7 @@ a{color:inherit}
 .msg{font-size:13px;line-height:1.5;min-height:1em}
 .msg.erro{border-left:2px solid var(--fg);padding-left:10px}
 .msg.ok{color:var(--g1);border-left:2px solid var(--g3);padding-left:10px}
-.wrap{max-width:880px;margin:0 auto;padding:28px 28px 80px}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 28px 80px}
 .cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:1px solid var(--g3);padding-bottom:18px;margin-bottom:18px}
 .cab h1{font-weight:400;font-size:28px;letter-spacing:.04em;margin:6px 0 0}
 .cab .sub{margin-top:6px}
@@ -39,31 +39,81 @@ a{color:inherit}
 .filtros{display:flex;gap:8px;flex:1 1 320px}
 .filtros select{max-width:190px}
 
-.aviso{border:1px solid var(--g3);margin-bottom:14px;background:var(--bg)}
-.aviso.importante{border-left:4px solid var(--fg)}
-.aviso.urgente{border-color:var(--fg)}
-.aviso.lido{border-color:#dcd9df}
-.aviso.lido.importante{border-left-color:var(--g3)}
-.aviso .faixa{background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:.24em;text-transform:uppercase;padding:7px 18px}
-.aviso.lido .faixa{background:var(--g2)}
-.aviso .corpo{padding:18px 20px 16px}
-.aviso .tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
-.tag{font-size:10px;letter-spacing:.18em;text-transform:uppercase;border:1px solid var(--g3);padding:3px 7px;color:var(--g1)}
-.tag.cheia{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-.tag.novo{border-color:var(--fg);color:var(--fg)}
-.aviso h2{font-weight:400;font-size:20px;letter-spacing:.02em;margin:0 0 10px;line-height:1.3}
-.aviso .texto{line-height:1.65;white-space:normal;overflow-wrap:anywhere}
-.aviso .texto.curto{max-height:9.6em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
-.aviso .mais{background:none;border:0;color:var(--fg);padding:6px 0;text-decoration:underline;text-underline-offset:3px}
-.aviso .link{display:inline-block;margin-top:10px;font-size:13px;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
-.aviso .pe{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--soft);margin-top:14px;padding-top:12px}
-.aviso .acoes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.cienteok{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--g1)}
-.cienteok::before{content:"✓  "}
-.leit{background:none;border:0;color:var(--g1);padding:4px 0;text-decoration:underline;text-underline-offset:3px;letter-spacing:.08em}
-.arq{opacity:.6}
+/* ===== quadro ===== */
+.quadro{position:relative;border:14px solid #141414;box-shadow:inset 0 0 0 1px #2a2a2a,inset 0 6px 22px rgba(0,0,0,.28),0 18px 40px -18px rgba(0,0,0,.45);
+  background-color:#d9c6a8;
+  background-image:radial-gradient(rgba(120,84,44,.22) 1px,transparent 1.6px),radial-gradient(rgba(255,255,255,.28) 1px,transparent 1.8px),radial-gradient(rgba(90,60,30,.16) 1.2px,transparent 2px),linear-gradient(135deg,#dcc9aa,#cfb893);
+  background-size:7px 7px,11px 11px,17px 17px,100% 100%;background-position:0 0,3px 5px,8px 2px,0 0;
+  padding:34px 30px 40px;min-height:420px}
+.quadro .placa{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#141414;color:#fff;font-size:10px;letter-spacing:.34em;text-transform:uppercase;padding:6px 18px 8px;white-space:nowrap}
+.secao{display:flex;align-items:center;gap:12px;margin:6px 0 22px;color:#3a2c1c}
+.secao span{font-size:10px;letter-spacing:.3em;text-transform:uppercase;background:rgba(255,255,255,.7);padding:5px 10px;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.secao::after{content:"";flex:1;border-top:1px dashed rgba(58,44,28,.35)}
+.notas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:38px 30px;align-items:start;margin-bottom:34px}
+.notas:last-child{margin-bottom:0}
 
+.nota{--papel:#fffdf7;--pino:#ff5cb8;position:relative;background:var(--papel);color:#1d1d1f;padding:30px 20px 16px;cursor:pointer;
+  box-shadow:0 1px 1px rgba(0,0,0,.12),0 10px 18px -8px rgba(60,40,20,.45);transform:rotate(var(--giro,0deg));transition:transform .18s ease,box-shadow .18s ease;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 40%);outline:none}
+.nota:nth-child(4n+1){--giro:-1.4deg}.nota:nth-child(4n+2){--giro:1.1deg}.nota:nth-child(4n+3){--giro:-.5deg}.nota:nth-child(4n){--giro:1.6deg}
+.nota:hover,.nota:focus-visible{transform:rotate(0) translateY(-4px) scale(1.015);box-shadow:0 2px 3px rgba(0,0,0,.12),0 22px 30px -12px rgba(60,40,20,.55);z-index:2}
+.nota:focus-visible{box-shadow:0 0 0 2px #141414,0 22px 30px -12px rgba(60,40,20,.55)}
+/* alfinete */
+.nota::before{content:"";position:absolute;top:9px;left:50%;width:15px;height:15px;margin-left:-7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff 0 12%,var(--pino) 34%,color-mix(in srgb,var(--pino) 60%,#000) 100%);box-shadow:1px 3px 4px rgba(0,0,0,.35)}
+.nota.fixado::before{width:19px;height:19px;margin-left:-9px;top:7px}
+.nota.importante{--pino:#141414}
+.nota.urgente{--pino:#d7263d}
+/* fita de urgente */
+.fita{position:absolute;top:10px;right:-12px;transform:rotate(38deg);background:#d7263d;color:#fff;font-size:9px;letter-spacing:.26em;text-transform:uppercase;padding:4px 22px;box-shadow:0 2px 4px rgba(0,0,0,.25)}
+.nota.urgente{outline:2px solid #d7263d;outline-offset:-2px}
+.carimbo{position:absolute;top:30px;right:14px;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#c2187a;border:1.5px solid #c2187a;padding:3px 6px;transform:rotate(8deg);background:rgba(255,255,255,.4)}
+.nota.urgente .carimbo{top:40px}
+.nota .cat{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:rgba(29,29,31,.62);margin-bottom:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-right:58px}
+.nota .cat i{font-style:normal;color:#141414}
+.nota h2{font-weight:400;font-size:19px;line-height:1.3;letter-spacing:.01em;margin:0 0 10px;overflow-wrap:anywhere}
+.nota .resumo{font-size:14px;line-height:1.6;color:#2b2b2e;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.nota .assin{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;margin-top:14px;padding-top:10px;border-top:1px dashed rgba(29,29,31,.2)}
+.nota .autor{font-size:12px;color:rgba(29,29,31,.66);line-height:1.4}
+.nota .autor b{display:block;font-weight:400;color:#1d1d1f;font-size:13px}
+.nota .assin button{padding:7px 10px;font-size:9.5px}
+.nota.lido{filter:saturate(.75)}
+.nota.lido .resumo,.nota.lido h2{color:#4a4a4e}
+.cienteok{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#1a7f3c;white-space:nowrap}
+.cienteok::before{content:"✓ "}
+.nota .leit{display:block;margin-top:8px;font-size:11px;color:rgba(29,29,31,.66);letter-spacing:.04em}
+.nota.arq{opacity:.7;filter:grayscale(.6)}
+/* pisca enquanto alguém do time ainda não deu ciente */
+@keyframes brilho{0%,100%{box-shadow:0 1px 1px rgba(0,0,0,.12),0 10px 18px -8px rgba(60,40,20,.45),0 0 0 0 rgba(255,92,184,0)}
+  50%{box-shadow:0 1px 1px rgba(0,0,0,.12),0 10px 18px -8px rgba(60,40,20,.45),0 0 0 6px rgba(255,92,184,.55),0 0 26px 6px rgba(255,92,184,.45)}}
+@keyframes brilhoForte{0%,100%{box-shadow:0 1px 1px rgba(0,0,0,.12),0 10px 18px -8px rgba(60,40,20,.45),0 0 0 0 rgba(255,92,184,0)}
+  50%{box-shadow:0 1px 1px rgba(0,0,0,.12),0 10px 18px -8px rgba(60,40,20,.45),0 0 0 9px rgba(255,92,184,.8),0 0 36px 10px rgba(255,92,184,.6)}}
+@keyframes alfinete{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+.nota.pendente{animation:brilho 1.8s ease-in-out infinite}
+.nota.pendente.meu{animation:brilhoForte 1.1s ease-in-out infinite}
+.nota.pendente::before{animation:alfinete 1.8s ease-in-out infinite}
+.nota.urgente.pendente{--rosa:215,38,61}
+.nota .falta{display:inline-block;margin-top:10px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#c2187a}
+.nota .falta::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff5cb8;margin-right:7px;vertical-align:1px;animation:alfinete 1.1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.nota.pendente,.nota.pendente::before,.nota .falta::before{animation:none}.nota.pendente{outline:3px solid #ff5cb8;outline-offset:3px}}
+.vazio-quadro{max-width:380px;margin:60px auto;text-align:center}
+.vazio-quadro .nota{cursor:default;--giro:-1.2deg;padding:34px 24px 26px;color:#2b2b2e;line-height:1.6}
+.vazio-quadro .nota:hover{transform:rotate(-1.2deg)}
+
+/* leitura do aviso */
+#dlgLer{max-width:640px;background:transparent;overflow:visible}
+#dlgLer .papel{position:relative;background:var(--papel,#fffdf7);padding:38px 34px 26px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);background-image:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,0) 30%);max-height:calc(100vh - 40px);overflow:auto}
+#dlgLer .papel::before{content:"";position:absolute;top:12px;left:50%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0 12%,var(--pino,#ff5cb8) 34%,#5a1238 100%);box-shadow:1px 3px 4px rgba(0,0,0,.35)}
+#dlgLer h2{font-weight:400;font-size:26px;line-height:1.25;margin:8px 0 14px}
+#dlgLer .texto{font-size:15.5px;line-height:1.72;overflow-wrap:anywhere}
+#dlgLer .link{display:inline-block;margin-top:14px;font-size:13px;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+#dlgLer .rodape{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;padding-top:16px;border-top:1px dashed rgba(0,0,0,.2)}
+#dlgLer .gestao{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+#dlgLer .gestao button,#dlgLer .rodape .ghost{background:rgba(255,255,255,.55)}
+#dlgLer .fechar{position:absolute;top:10px;right:12px;background:none;border:0;color:#1d1d1f;font-size:22px;letter-spacing:0;padding:4px 8px}
+.leit{background:none;border:0;color:var(--g1);padding:4px 0;text-decoration:underline;text-underline-offset:3px;letter-spacing:.04em;text-transform:none;font-size:12px}
 .vazio{border:1px dashed var(--g3);padding:40px 22px;text-align:center;color:var(--g2);line-height:1.6}
+@media (max-width:640px){.quadro{border-width:9px;padding:28px 14px 30px}.notas{gap:30px 18px}#dlgLer .papel{padding:34px 20px 22px}}
 .carregando{color:var(--g2);font-size:13px;padding:6px 0 14px}
 .bloqueio{max-width:440px;margin:80px auto;text-align:center;line-height:1.7;color:var(--g1)}
 
@@ -149,16 +199,28 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
   </form>
 </dialog>
 
+<dialog id="dlgLer" aria-labelledby="lrTitulo">
+  <div class="papel" id="lrPapel">
+    <button type="button" class="fechar" id="lrFechar" aria-label="Fechar">×</button>
+    <div class="cat" id="lrCat" style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:rgba(0,0,0,.6)"></div>
+    <h2 id="lrTitulo"></h2>
+    <div class="texto" id="lrTexto"></div>
+    <div id="lrLink"></div>
+    <div class="rodape"><div class="mut" id="lrAutor"></div><div id="lrCiente"></div></div>
+    <div class="gestao" id="lrGestao"></div>
+  </div>
+</dialog>
+
 <dialog id="dlgLeit">
   <div class="dlg">
     <div><span class="k">Quem já leu</span><h3 id="dlTitulo"></h3></div>
     <div id="dlCorpo" class="mut">Carregando…</div>
-    <p class="mut" style="margin:0">"Ainda não leram" mostra quem já abriu o mural pelo menos uma vez e ainda não marcou ciente neste aviso.</p>
+    <p class="mut" style="margin:0">"Ainda não leram" mostra quem está ativo em Pessoas e acessos e ainda não marcou ciente. O aviso fica piscando no mural até todos darem ciente.</p>
     <div class="rodape-dlg"><button type="button" id="dlFechar">Fechar</button></div>
   </div>
 </dialog>
 
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 <script>
 const SC_CENTER = 'https://saintgermainb-hub.github.io/saintcenter/';
 const API = window.MURAL_API || '';
@@ -248,6 +310,11 @@ function desenharTudo(){
   try{ if(window.parent!==window) window.parent.postMessage({saintCenter:'mural', novos:nNovos, urgentes:ativos.filter(a=>naoLido(a)&&a.prioridade==='urgente').length}, location.origin); }catch(_){}
   desenharLista();
 }
+const PAPEIS = {'geral':'#fffdf7','processo':'#fff3b0','operacao':'#dcebff','escala e turnos':'#dcf2e1','rh':'#ffe0ee','sistemas':'#ebe3ff','reconhecimento':'#ffe4c7'};
+const EXTRAS = ['#fff3b0','#dcebff','#dcf2e1','#ffe0ee','#ebe3ff','#ffe4c7','#e3f4f4'];
+function papel(cat){ const k = norm(cat); if(PAPEIS[k]) return PAPEIS[k]; let h = 0; for(const c of k) h = (h*31 + c.charCodeAt(0)) >>> 0; return EXTRAS[h % EXTRAS.length]; }
+function resumoTexto(t){ return esc(String(t||'').replace(/\s*\n\s*/g,' · ').slice(0,420)); }
+
 function desenharLista(){
   let l = S.avisos;
   if(S.aba==='arquivados') l = l.filter(a => a.status!=='ativo');
@@ -257,45 +324,36 @@ function desenharLista(){
   if(S.cat) l = l.filter(a => a.categoria===S.cat);
   if(S.q){ const q = norm(S.q); l = l.filter(a => norm(a.titulo+' '+a.texto+' '+a.categoria+' '+a.autorNome).includes(q)); }
   l = ordenar(l);
+  const placa = `<div class="placa">Saint Germain · Avisos</div>`;
   if(!l.length){
     const t = S.aba==='novos' ? 'Tudo lido por aqui. Quando sair aviso novo, ele aparece nesta aba.'
       : S.q || S.cat ? 'Nenhum aviso encontrado com esse filtro.'
       : S.aba==='arquivados' ? 'Nenhum aviso arquivado.'
-      : S.publica ? 'O mural ainda está vazio. Clique em "Novo aviso" para publicar o primeiro.' : 'Nenhum aviso no mural por enquanto.';
-    $('lista').innerHTML = `<div class="vazio">${esc(t)}</div>`; return;
+      : S.publica ? 'O mural ainda está vazio. Clique em "Novo aviso" para prender o primeiro aqui.' : 'Nenhum aviso no mural por enquanto.';
+    $('lista').innerHTML = `<div class="quadro">${placa}<div class="vazio-quadro"><div class="nota">${esc(t)}</div></div></div>`; return;
   }
-  $('lista').innerHTML = l.map(cartao).join('');
-  document.querySelectorAll('.texto[data-id]').forEach(el => {
-    if(S.abertos[el.dataset.id] || el.scrollHeight <= el.clientHeight + 4){ el.classList.remove('curto'); const b = el.nextElementSibling; if(b && b.classList.contains('mais')) b.hidden = true; }
-  });
+  const fix = S.aba==='todos' ? l.filter(a => a.fixado) : [];
+  const resto = l.filter(a => !fix.includes(a));
+  let h = '';
+  if(fix.length) h += `<div class="secao"><span>Fixados</span></div><div class="notas">${fix.map(cartao).join('')}</div>`;
+  if(resto.length) h += (fix.length ? `<div class="secao"><span>${S.aba==='todos'?'Mais avisos':''}</span></div>` : '') + `<div class="notas">${resto.map(cartao).join('')}</div>`;
+  $('lista').innerHTML = `<div class="quadro">${placa}${h}</div>`;
 }
 function cartao(a){
   const lido = S.lidos[a.id], novo = naoLido(a);
-  const faixa = a.prioridade==='urgente' ? `<div class="faixa">Urgente</div>` : '';
-  const tags = [
-    a.fixado ? `<span class="tag cheia">Fixado</span>` : '',
-    `<span class="tag">${esc(a.categoria)}</span>`,
-    a.prioridade==='importante' ? `<span class="tag">Importante</span>` : '',
-    novo ? `<span class="tag novo">Novo</span>` : '',
-    a.status!=='ativo' ? `<span class="tag">Arquivado</span>` : '',
-    a.expiraEm ? `<span class="mut">até ${esc(a.expiraEm.split('-').reverse().join('/'))}</span>` : ''
-  ].join('');
-  const autor = `<span class="mut">${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}</span>`;
-  const cienteHtml = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente · ${esc(quando(lido))}</span>`
+  const ciente = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente</span>`
     : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
-  const pub = !S.publica ? '' : `
-    <button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>
-    <button type="button" class="ghost mini" data-fixar="${a.id}">${a.fixado?'Desafixar':'Fixar'}</button>
-    <button type="button" class="ghost mini" data-editar="${a.id}">Editar</button>
-    <button type="button" class="ghost mini" data-arquivar="${a.id}">${a.status==='ativo'?'Arquivar':'Voltar ao mural'}</button>`;
-  return `<article class="aviso ${esc(a.prioridade)}${lido?' lido':''}${a.status!=='ativo'?' arq':''}">${faixa}<div class="corpo">
-    <div class="tags">${tags}</div>
+  const pend = a.status==='ativo' && (a.faltam > 0 || novo);
+  return `<article class="nota ${esc(a.prioridade)}${a.fixado?' fixado':''}${lido?' lido':''}${a.status!=='ativo'?' arq':''}${pend?' pendente':''}${novo?' meu':''}" style="--papel:${papel(a.categoria)}" tabindex="0" data-ler="${a.id}" aria-label="${esc(a.titulo)}">
+    ${a.prioridade==='urgente' ? `<span class="fita">Urgente</span>` : ''}
+    ${novo ? `<span class="carimbo">Novo</span>` : ''}
+    <div class="cat"><span>${esc(a.categoria)}</span>${a.prioridade==='importante'?'<i>· Importante</i>':''}${a.status!=='ativo'?'<i>· Arquivado</i>':''}</div>
     <h2>${esc(a.titulo)}</h2>
-    <div class="texto curto" data-id="${a.id}">${textoRico(a.texto)}</div>
-    <button type="button" class="mais" data-mais="${a.id}">Ler tudo</button>
-    ${a.link?`<a class="link" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir link →</a>`:''}
-    <div class="pe"><div>${autor}</div><div class="acoes">${cienteHtml}${pub}</div></div>
-  </div></article>`;
+    <div class="resumo">${resumoTexto(a.texto)}</div>
+    <div class="assin"><div class="autor"><b>${esc(a.autorNome)}</b>${esc(quando(a.criadoEm))}${a.expiraEm?` · até ${esc(a.expiraEm.split('-').reverse().join('/'))}`:''}</div>${ciente}</div>
+    ${pend && a.faltam > 0 ? `<span class="falta">${novo ? 'Falta o seu ciente' : `Faltam ${a.faltam} ${a.faltam>1?'cientes':'ciente'}`}</span>` : ''}
+    ${S.publica ? `<button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>` : ''}
+  </article>`;
 }
 
 /* ===== ações ===== */
@@ -304,30 +362,63 @@ $('q').addEventListener('input', e => { S.q = e.target.value; desenharLista(); }
 $('fCat').addEventListener('change', e => { S.cat = e.target.value; desenharLista(); });
 $('btnAtualizar').onclick = () => carregar(true);
 
-$('lista').addEventListener('click', async e => {
-  const b = e.target.closest('button'); if(!b || b.disabled) return;
+async function acao(b){
   const d = b.dataset;
-  if(d.mais){ S.abertos[d.mais] = true; const t = document.querySelector(`.texto[data-id="${d.mais}"]`); if(t) t.classList.remove('curto'); b.hidden = true; return; }
-  if(d.leit) return abrirLeitores(d.leit);
-  if(d.editar) return abrirAviso(S.avisos.find(a => a.id===d.editar));
+  if(d.leit){ return abrirLeitores(d.leit); }
+  if(d.editar){ $('dlgLer').close(); return abrirAviso(S.avisos.find(a => a.id===d.editar)); }
   b.disabled = true;
   try{
     if(d.ciente){
-      b.textContent = 'Registrando…';
-      const r = await call('ciente', d.ciente);
-      S.lidos[r.id] = r.em;
-      const a = S.avisos.find(x => x.id===r.id); if(a && S.publica) a.leram = (a.leram||0)+1;
-      try{ const c = JSON.parse(localStorage.getItem(chaveCache())||'null'); if(c){ c.lidos = S.lidos; localStorage.setItem(chaveCache(), JSON.stringify(c)); } }catch(_){}
-      desenharTudo();
+      const txt = b.textContent; b.textContent = 'Registrando…';
+      try{
+        const r = await call('ciente', d.ciente);
+        S.lidos[r.id] = r.em;
+        const a = S.avisos.find(x => x.id===r.id); if(a){ if(a.faltam > 0) a.faltam--; if(S.publica) a.leram = (a.leram||0)+1; }
+        try{ const c = JSON.parse(localStorage.getItem(chaveCache())||'null'); if(c){ c.lidos = S.lidos; localStorage.setItem(chaveCache(), JSON.stringify(c)); } }catch(_){}
+        desenharTudo(); if($('dlgLer').open) abrirLer(r.id);
+      }catch(er){ b.textContent = txt; throw er; }
     }
-    else if(d.fixar){ const a = S.avisos.find(x => x.id===d.fixar); aplicar(await call('fixar', d.fixar, !a.fixado)); }
+    else if(d.fixar){ const a = S.avisos.find(x => x.id===d.fixar); aplicar(await call('fixar', d.fixar, !a.fixado)); if($('dlgLer').open) abrirLer(d.fixar); }
     else if(d.arquivar){
-      const a = S.avisos.find(x => x.id===d.arquivar);
-      aplicar(await call('arquivar', d.arquivar, a.status==='ativo'));
-      msg('mGeral', a.status==='ativo' ? 'Aviso arquivado. Ele fica na aba "Arquivados".' : 'Aviso de volta ao mural.', 'ok');
+      const a = S.avisos.find(x => x.id===d.arquivar), arq = a.status==='ativo';
+      aplicar(await call('arquivar', d.arquivar, arq)); $('dlgLer').close();
+      msg('mGeral', arq ? 'Aviso arquivado. Ele fica na aba "Arquivados".' : 'Aviso de volta ao mural.', 'ok');
     }
-  }catch(er){ msg('mGeral', er.message, 'erro'); b.disabled = false; if(d.ciente) b.textContent = 'Li e estou ciente'; }
+  }catch(er){ msg('mGeral', er.message, 'erro'); if($('dlgLer').open) alertaLer(er.message); b.disabled = false; }
+}
+$('lista').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if(b){ if(!b.disabled) acao(b); return; }
+  const n = e.target.closest('[data-ler]'); if(n && !e.target.closest('a')) abrirLer(n.dataset.ler);
 });
+$('lista').addEventListener('keydown', e => {
+  const n = e.target.closest && e.target.closest('[data-ler]');
+  if(n && e.target === n && (e.key==='Enter' || e.key===' ')){ e.preventDefault(); abrirLer(n.dataset.ler); }
+});
+function alertaLer(t){ let m = $('lrMsg'); if(!m){ m = document.createElement('div'); m.id='lrMsg'; m.className='msg erro'; m.style.marginTop='12px'; $('lrPapel').appendChild(m); } m.textContent = t; }
+function abrirLer(id){
+  const a = S.avisos.find(x => x.id===id); if(!a) return;
+  const lido = S.lidos[a.id], p = $('lrPapel');
+  p.style.setProperty('--papel', papel(a.categoria));
+  p.style.setProperty('--pino', a.prioridade==='urgente' ? '#d7263d' : a.prioridade==='importante' ? '#141414' : '#ff5cb8');
+  $('lrCat').textContent = [a.categoria, a.prioridade!=='normal' ? (a.prioridade==='urgente'?'Urgente':'Importante') : '', a.fixado?'Fixado':''].filter(Boolean).join(' · ');
+  $('lrTitulo').textContent = a.titulo;
+  $('lrTexto').innerHTML = textoRico(a.texto);
+  $('lrLink').innerHTML = a.link ? `<a class="link" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir link →</a>` : '';
+  $('lrAutor').innerHTML = `${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}${a.expiraEm?` · fica até ${esc(a.expiraEm.split('-').reverse().join('/'))}`:''}`;
+  $('lrCiente').innerHTML = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente · ${esc(quando(lido))}</span>` : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
+  $('lrGestao').innerHTML = !S.publica ? '' : `
+    <button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>
+    <span style="flex:1"></span>
+    <button type="button" class="ghost mini" data-fixar="${a.id}">${a.fixado?'Desafixar':'Fixar'}</button>
+    <button type="button" class="ghost mini" data-editar="${a.id}">Editar</button>
+    <button type="button" class="ghost mini" data-arquivar="${a.id}">${a.status==='ativo'?'Arquivar':'Voltar ao mural'}</button>`;
+  const m = $('lrMsg'); if(m) m.remove();
+  if(!$('dlgLer').open) $('dlgLer').showModal();
+}
+$('lrPapel').addEventListener('click', e => { const b = e.target.closest('button[data-ciente],button[data-fixar],button[data-editar],button[data-arquivar],button[data-leit]'); if(b && !b.disabled) acao(b); });
+$('lrFechar').onclick = () => $('dlgLer').close();
+$('dlgLer').addEventListener('click', e => { if(e.target === $('dlgLer')) $('dlgLer').close(); });
 
 function abrirAviso(a){
   S.editando = a || null;

@@ -54,6 +54,9 @@ nav a{display:flex;justify-content:space-between;align-items:center;gap:10px;pad
 nav a:hover{color:var(--fg);background:var(--soft)}
 nav a[aria-current="page"]{color:var(--fg);border-left-color:var(--fg);background:var(--soft)}
 nav a .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--g3)}
+@keyframes piscaNovos{0%,100%{background:var(--fg);box-shadow:0 0 0 0 rgba(255,92,184,0)}50%{background:#ff5cb8;box-shadow:0 0 0 4px rgba(255,92,184,.3)}}
+.novos,.card .avisos-novos{animation:piscaNovos 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.novos,.card .avisos-novos{animation:none;background:#c2187a}}
 .novos{display:inline-block;min-width:18px;padding:1px 6px;background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:0;text-align:center;margin-left:8px}
 .card .avisos-novos{font-size:10px;letter-spacing:.2em;text-transform:uppercase;background:var(--fg);color:var(--bg);padding:3px 7px}
 .lateral-pe{border-top:1px solid var(--g3);padding:18px 26px 22px;display:grid;gap:4px}

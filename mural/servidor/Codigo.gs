@@ -66,6 +66,7 @@ function sessao(token) {
   Object.keys(perms).forEach(k => { if (!nivel && /^mural/.test(k) && perms[k]) nivel = perms[k]; });
   const publica = !!u.centerAdmin || nivel === 'admin' || CARGOS_QUE_PUBLICAM.test(String(u.cargo || ''));
   registrarPessoa(u);
+  if (u.centerAdmin) atualizarEquipe(token);
   return { token, u, publica };
 }
 function exigirPublica(ctx) {
@@ -140,6 +141,34 @@ function registrarPessoa(u) {
   } catch (_) { }
 }
 
+/* ---------------- equipe do Saint Center ----------------
+   "Todos" = pessoas ativas em Pessoas e acessos. A lista é atualizada sempre que a
+   coordenação usa o mural (no máximo a cada 20 min) e fica guardada aqui. */
+function atualizarEquipe(token) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const atual = JSON.parse(props.getProperty('EQUIPE') || 'null');
+    if (atual && Date.now() - atual.em < 20 * 60000) return;
+    const r = UrlFetchApp.fetch(SC_API, {
+      method: 'post', contentType: 'text/plain;charset=utf-8', muteHttpExceptions: true, followRedirects: true,
+      payload: JSON.stringify({ fn: 'listarPessoas', args: [token] })
+    });
+    const j = JSON.parse(r.getContentText());
+    if (!j.ok || !Array.isArray(j.resultado)) return;
+    const lista = j.resultado.filter(p => p && p.login && p.ativo !== false).map(p => ({ login: String(p.login), nome: String(p.nome || p.login), cargo: String(p.cargo || '') }));
+    if (!lista.length) return;
+    props.setProperty('EQUIPE', JSON.stringify({ em: Date.now(), lista }));
+  } catch (_) { }
+}
+/* quem precisa dar ciente: a equipe do Saint Center (ou, enquanto ela não foi lida, quem já abriu o mural) */
+function equipe() {
+  try {
+    const e = JSON.parse(PropertiesService.getScriptProperties().getProperty('EQUIPE') || 'null');
+    if (e && e.lista && e.lista.length) return e.lista;
+  } catch (_) { }
+  return todasPessoas();
+}
+
 /* ---------------- leitura com cache ---------------- */
 function cacheJson(chave, seg, fn) {
   const cache = CacheService.getScriptCache();
@@ -189,12 +218,16 @@ function iniciar(ctx) {
   const lidos = {};
   avisos.forEach(a => { const x = lei[a.id] && lei[a.id][ctx.u.login]; if (x) lidos[a.id] = x; });
   const visiveis = avisos.filter(a => ctx.publica || (a.status === 'ativo' && !expirado(a)));
-  const total = todasPessoas().length;
+  const eq = equipe(), total = eq.length;
   return {
     eu: { login: ctx.u.login, nome: ctx.u.nome || ctx.u.login, cargo: ctx.u.cargo || '' },
     publica: ctx.publica,
     categorias: lerConfig().categorias,
-    avisos: visiveis.map(a => Object.assign({}, a, ctx.publica ? { leram: Object.keys(lei[a.id] || {}).length, pessoas: total } : {})),
+    avisos: visiveis.map(a => {
+      const l = lei[a.id] || {};
+      const faltam = eq.filter(p => !l[p.login]).length; // enquanto faltar alguém, o aviso pisca no mural
+      return Object.assign({}, a, { faltam }, ctx.publica ? { leram: total - faltam, pessoas: total } : {});
+    }),
     lidos
   };
 }
@@ -293,7 +326,8 @@ function leitores(ctx, id) {
   todasPessoas().forEach(p => nomes[p.login] = p.nome);
   linhas('leituras').forEach(l => { if (String(l[1]) === String(id)) nomes[String(l[2])] = nomes[String(l[2])] || String(l[3]); });
   const leram = Object.keys(lei).map(login => ({ login, nome: nomes[login] || login, em: lei[login] })).sort((a, b) => a.em < b.em ? -1 : 1);
-  const faltam = todasPessoas().filter(p => !lei[p.login]).map(p => ({ login: p.login, nome: p.nome, cargo: p.cargo })).sort((a, b) => a.nome.localeCompare(b.nome));
+  equipe().forEach(p => nomes[p.login] = nomes[p.login] || p.nome);
+  const faltam = equipe().filter(p => !lei[p.login]).map(p => ({ login: p.login, nome: p.nome, cargo: p.cargo })).sort((a, b) => a.nome.localeCompare(b.nome));
   return { leram, faltam };
 }
 
