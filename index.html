@@ -530,6 +530,8 @@ $('fEntrar').addEventListener('submit', async e => {
   e.preventDefault();
   const b = e.submitter || $('fEntrar').querySelector('button[type=submit]'); b.disabled = true; msg('mEntrar','Entrando…');
   try{
+    // tira espaços que vêm junto quando a senha é copiada do e-mail
+    $('lLogin').value = $('lLogin').value.trim(); $('lSenha').value = $('lSenha').value.trim();
     const r = await call('entrar', $('lLogin').value, $('lSenha').value);
     S.tempUsada = r.trocar ? $('lSenha').value : '';
     saLimpar();
