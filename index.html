@@ -54,19 +54,21 @@ nav a{display:flex;justify-content:space-between;align-items:center;gap:10px;pad
 nav a:hover{color:var(--fg);background:var(--soft)}
 nav a[aria-current="page"]{color:var(--fg);border-left-color:var(--fg);background:var(--soft)}
 nav a .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--g3)}
-#muralPop{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:12px;background:#fff2f6;border:3px solid #fde3ea;border-radius:26px;padding:10px 16px 10px 10px;
-  box-shadow:inset 0 3px 0 rgba(255,255,255,.95),inset 0 -5px 10px rgba(214,110,145,.18),0 14px 30px -10px rgba(226,120,155,.6);cursor:pointer;max-width:330px;animation:popEntra .5s cubic-bezier(.2,1.4,.4,1)}
-#muralPop img{width:84px;flex:none;animation:popPula 1.4s ease-in-out infinite;transform-origin:50% 90%}
-#muralPop b{display:block;color:#ec7f9e;font-size:17px;line-height:1.2;font-weight:700}
-#muralPop span{display:block;color:#5c4651;font-size:12.5px;margin-top:3px}
-#muralPop .x{position:absolute;top:-10px;right:-10px;width:28px;height:28px;border-radius:50%;border:0;background:#ec7f9e;color:#fff;font-size:16px;line-height:1;padding:0;cursor:pointer}
-@keyframes popPula{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
-@keyframes popEntra{from{transform:translateY(30px) scale(.9);opacity:0}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion:reduce){#muralPop,#muralPop img{animation:none}}
+#muralPop{position:fixed;right:22px;bottom:22px;z-index:60;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e8e4de;border-left:3px solid #1d1d1f;border-radius:14px;padding:14px 40px 14px 14px;
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.35);cursor:pointer;max-width:340px;animation:popEntra .35s ease}
+#muralPop .icone{flex:none;width:44px;height:44px;border-radius:50%;background:#1d1d1f;display:grid;place-items:center;animation:popToque 2.4s ease-in-out infinite}
+#muralPop .icone svg{width:22px;height:22px}
+#muralPop b{display:block;font-weight:400;font-size:15px;line-height:1.25;color:#1d1d1f}
+#muralPop span{display:block;color:#86817b;font-size:12px;margin-top:3px}
+#muralPop .x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:0;background:transparent;color:#86817b;font-size:18px;line-height:1;padding:0;cursor:pointer}
+#muralPop .x:hover{background:#f3f1ee;color:#1d1d1f}
+@keyframes popToque{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(-12deg)}80%{transform:rotate(10deg)}85%{transform:rotate(-6deg)}90%{transform:rotate(4deg)}}
+@keyframes popEntra{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#muralPop,#muralPop .icone{animation:none}}
 @media (max-width:640px){#muralPop{right:12px;bottom:12px;left:12px;max-width:none}}
-@keyframes piscaNovos{0%,100%{background:var(--fg);box-shadow:0 0 0 0 rgba(255,92,184,0)}50%{background:#ff5cb8;box-shadow:0 0 0 4px rgba(255,92,184,.3)}}
+@keyframes piscaNovos{0%,100%{opacity:1}50%{opacity:.35}}
 .novos,.card .avisos-novos{animation:piscaNovos 1.2s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.novos,.card .avisos-novos{animation:none;background:#c2187a}}
+@media (prefers-reduced-motion:reduce){.novos,.card .avisos-novos{animation:none}}
 .novos{display:inline-block;min-width:18px;padding:1px 6px;background:var(--fg);color:var(--bg);font-size:10px;letter-spacing:0;text-align:center;margin-left:8px}
 .card .avisos-novos{font-size:10px;letter-spacing:.2em;text-transform:uppercase;background:var(--fg);color:var(--bg);padding:3px 7px}
 .lateral-pe{border-top:1px solid var(--g3);padding:18px 26px 22px;display:grid;gap:4px}
@@ -616,14 +618,14 @@ function desenharMuralPop(){
   if(!mod || !n || noMural || fechado || !S.eu){ if(el) el.remove(); return; }
   if(!el){
     el = document.createElement('div'); el.id = 'muralPop'; el.setAttribute('role','button'); el.tabIndex = 0;
-    el.innerHTML = `<img src="mural/mascote.svg" alt=""><div><b></b><span></span></div><button type="button" class="x" aria-label="Fechar">×</button>`;
+    el.innerHTML = `<span class="icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M16.5 9a4 4 0 0 1 0 6"/><path d="M19 6.5a7.5 7.5 0 0 1 0 11"/></svg></span><div><b></b><span></span></div><button type="button" class="x" aria-label="Fechar">×</button>`;
     document.body.appendChild(el);
     const ir = () => { location.hash = '#/m/' + mod.k; };
     el.addEventListener('click', e => { if(e.target.closest('.x')){ e.stopPropagation(); try{ sessionStorage.setItem('sc-mural-pop', String(S.mural.novos)); }catch(_){} el.remove(); return; } ir(); });
     el.addEventListener('keydown', e => { if(e.key === 'Enter') ir(); });
   }
-  el.querySelector('b').textContent = n > 1 ? `Tem ${n} avisos novos!` : 'Tem aviso novo!';
-  el.querySelector('span').textContent = (S.mural.urgentes ? 'Tem aviso urgente. ' : '') + 'Toque para ler no Mural.';
+  el.querySelector('b').textContent = n > 1 ? `Você tem ${n} avisos novos no Mural` : 'Você tem um aviso novo no Mural';
+  el.querySelector('span').textContent = (S.mural.urgentes ? 'Há aviso urgente. ' : '') + 'Clique para ler.';
 }
 function desenharEu(){
   $('euNome').textContent = S.eu.nome;
