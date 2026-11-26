@@ -180,19 +180,26 @@ function cacheJson(chave, seg, fn) {
 }
 function limparCache() { CacheService.getScriptCache().removeAll(['avisos', 'leituras', 'pessoas']); }
 
+/* a planilha às vezes transforma texto em data: devolve sempre texto */
+function txt(v) { return v instanceof Date ? v.toISOString() : String(v == null ? '' : v); }
+function dia(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd');
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v || ''));
+  return m ? m[1] : '';
+}
 function todosAvisos() {
   return cacheJson('avisos', 600, () => linhas('avisos').map(l => ({
     id: String(l[0]), titulo: String(l[1] || ''), texto: String(l[2] || ''), categoria: String(l[3] || 'Geral'),
     prioridade: String(l[4] || 'normal'), fixado: String(l[5]) === 'sim', link: String(l[6] || ''),
-    autorLogin: String(l[7] || ''), autorNome: String(l[8] || ''), criadoEm: String(l[9] || ''), editadoEm: String(l[10] || ''),
-    status: String(l[11] || 'ativo'), expiraEm: String(l[12] || '')
+    autorLogin: String(l[7] || ''), autorNome: String(l[8] || ''), criadoEm: txt(l[9]), editadoEm: txt(l[10]),
+    status: String(l[11] || 'ativo'), expiraEm: dia(l[12])
   })));
 }
 /* leituras agrupadas: { avisoId: { login: em } } */
 function todasLeituras() {
   return cacheJson('leituras', 600, () => {
     const m = {};
-    linhas('leituras').forEach(l => { const a = String(l[1]); (m[a] = m[a] || {})[String(l[2])] = String(l[4] || ''); });
+    linhas('leituras').forEach(l => { const a = String(l[1]); (m[a] = m[a] || {})[String(l[2])] = txt(l[4]); });
     return m;
   });
 }
@@ -209,7 +216,7 @@ function lerConfig() {
   });
 }
 
-function expirado(a) { return a.expiraEm && a.expiraEm < agora().slice(0, 10); }
+function expirado(a) { return a.expiraEm && a.expiraEm < Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'America/Sao_Paulo', 'yyyy-MM-dd'); }
 
 /* ---------------- funções chamadas pela página ---------------- */
 function iniciar(ctx) {
@@ -257,7 +264,7 @@ function publicar(ctx, dados) {
   const id = 'A' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
   travar(() => {
     aba('avisos').appendRow([id, a.titulo, a.texto, a.categoria, a.prioridade, a.fixado ? 'sim' : 'nao', a.link,
-      ctx.u.login, ctx.u.nome || ctx.u.login, agora(), '', 'ativo', a.expiraEm]);
+      ctx.u.login, ctx.u.nome || ctx.u.login, agora(), '', 'ativo', a.expiraEm ? "'" + a.expiraEm : '']);
     // quem publica já fica como ciente
     aba('leituras').appendRow([id + '|' + ctx.u.login, id, ctx.u.login, ctx.u.nome || ctx.u.login, agora()]);
   });
@@ -275,7 +282,7 @@ function editar(ctx, id, dados) {
     const sh = aba('avisos');
     sh.getRange(r, 2, 1, 6).setValues([[a.titulo, a.texto, a.categoria, a.prioridade, a.fixado ? 'sim' : 'nao', a.link]]);
     sh.getRange(r, 11).setValue(agora());
-    sh.getRange(r, 13).setValue(a.expiraEm);
+    sh.getRange(r, 13).setValue(a.expiraEm ? "'" + a.expiraEm : '');
   });
   limparCache();
   log(ctx, 'editou', a.titulo);

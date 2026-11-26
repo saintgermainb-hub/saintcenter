@@ -227,6 +227,7 @@ const API = window.MURAL_API || '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const dataBR = d => /^\d{4}-\d{2}-\d{2}$/.test(d||'') ? d.split('-').reverse().join('/') : '';
 const S = { token:'', eu:null, publica:false, avisos:[], lidos:{}, categorias:[], aba:'todos', q:'', cat:'', abertos:{}, editando:null, carregadoEm:0 };
 
 function msg(el, texto, tipo){ const m=$(el); m.textContent=texto||''; m.className='msg'+(texto&&tipo?' '+tipo:''); }
@@ -350,7 +351,7 @@ function cartao(a){
     <div class="cat"><span>${esc(a.categoria)}</span>${a.prioridade==='importante'?'<i>· Importante</i>':''}${a.status!=='ativo'?'<i>· Arquivado</i>':''}</div>
     <h2>${esc(a.titulo)}</h2>
     <div class="resumo">${resumoTexto(a.texto)}</div>
-    <div class="assin"><div class="autor"><b>${esc(a.autorNome)}</b>${esc(quando(a.criadoEm))}${a.expiraEm?` · até ${esc(a.expiraEm.split('-').reverse().join('/'))}`:''}</div>${ciente}</div>
+    <div class="assin"><div class="autor"><b>${esc(a.autorNome)}</b>${esc(quando(a.criadoEm))}${dataBR(a.expiraEm)?` · até ${esc(dataBR(a.expiraEm))}`:''}</div>${ciente}</div>
     ${pend && a.faltam > 0 ? `<span class="falta">${novo ? 'Falta o seu ciente' : `Faltam ${a.faltam} ${a.faltam>1?'cientes':'ciente'}`}</span>` : ''}
     ${S.publica ? `<button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>` : ''}
   </article>`;
@@ -405,7 +406,7 @@ function abrirLer(id){
   $('lrTitulo').textContent = a.titulo;
   $('lrTexto').innerHTML = textoRico(a.texto);
   $('lrLink').innerHTML = a.link ? `<a class="link" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir link →</a>` : '';
-  $('lrAutor').innerHTML = `${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}${a.expiraEm?` · fica até ${esc(a.expiraEm.split('-').reverse().join('/'))}`:''}`;
+  $('lrAutor').innerHTML = `${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}${dataBR(a.expiraEm)?` · fica até ${esc(dataBR(a.expiraEm))}`:''}`;
   $('lrCiente').innerHTML = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente · ${esc(quando(lido))}</span>` : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
   $('lrGestao').innerHTML = !S.publica ? '' : `
     <button type="button" class="leit" data-leit="${a.id}">Lido por ${a.leram||0}${a.pessoas?' de '+a.pessoas:''}</button>
