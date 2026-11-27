@@ -136,6 +136,29 @@ a{color:inherit}
 #dlgLer .rodape{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-top:22px;padding-top:16px;border-top:1px solid var(--linha)}
 #dlgLer .gestao{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;align-items:center}
 #dlgLer .fechar{position:absolute;top:14px;right:14px;width:34px;height:34px;padding:0;font-size:20px;line-height:1;background:#fff;color:var(--fg);border-color:var(--g3);letter-spacing:0}
+/* fotos */
+.nota .capa{position:relative;margin:-2px -4px 12px;border-radius:8px;overflow:hidden;background:var(--off2);aspect-ratio:16/9}
+.nota .capa img{width:100%;height:100%;object-fit:cover;display:block}
+.nota .capa b{position:absolute;right:8px;bottom:8px;font-weight:400;font-size:11px;letter-spacing:.06em;background:rgba(29,29,31,.78);color:#fff;padding:3px 9px;border-radius:999px}
+#lrFotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:16px}
+#lrFotos:empty{display:none}
+#lrFotos.uma{grid-template-columns:1fr}
+#lrFotos button{all:unset;cursor:zoom-in;display:block;border-radius:10px;overflow:hidden;background:var(--off2);aspect-ratio:4/3}
+#lrFotos.uma button{aspect-ratio:auto;max-height:420px}
+#lrFotos img{width:100%;height:100%;object-fit:cover;display:block}
+#lrFotos.uma img{object-fit:contain;max-height:420px}
+#lrFotos button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+#dlgFoto{max-width:min(1100px,calc(100% - 24px));background:#111}
+#dlgFoto img{display:block;max-width:100%;max-height:calc(100vh - 60px);margin:auto}
+#dlgFoto .fechar{position:absolute;top:10px;right:10px;width:34px;height:34px;padding:0;font-size:20px;line-height:1;letter-spacing:0;background:#fff;color:var(--fg);border-color:#fff}
+#dlgFoto .nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;padding:0;font-size:20px;letter-spacing:0;background:rgba(255,255,255,.9);color:var(--fg);border-color:transparent}
+#dlgFoto .ant{left:10px}#dlgFoto .prox{right:10px}
+.fotos-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.fotos-form .mini-foto{position:relative;width:78px;height:78px;border-radius:10px;overflow:hidden;background:var(--off2);border:1px solid var(--linha)}
+.fotos-form .mini-foto img{width:100%;height:100%;object-fit:cover;display:block}
+.fotos-form .mini-foto button{position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0;font-size:14px;line-height:1;letter-spacing:0;background:rgba(255,255,255,.92);color:var(--fg);border-color:transparent}
+.fotos-form .add{display:flex;align-items:center;gap:8px}
+.fotos-form .add svg{width:16px;height:16px}
 .bloqueio{max-width:440px;margin:80px auto;text-align:center;line-height:1.7;color:var(--g1)}
 
 dialog{border:0;padding:0;max-width:680px;width:calc(100% - 24px);max-height:calc(100% - 24px);border-radius:16px;background:#fff}
@@ -222,6 +245,12 @@ dialog::backdrop{background:rgba(20,20,20,.35)}
       </div>
     </div>
     <label class="campo"><span class="k">Aviso</span><textarea id="aTexto" required maxlength="8000" placeholder="Escreva o que o time precisa saber. Pode colar links."></textarea></label>
+    <div class="campo">
+      <span class="k">Fotos (opcional · até 6)</span>
+      <div class="fotos-form" id="aFotos"></div>
+      <input type="file" id="aArquivo" accept="image/*" multiple hidden>
+      <span class="mut" style="font-size:12px">Também dá para colar um print (Ctrl+V) no campo do aviso.</span>
+    </div>
     <label class="campo"><span class="k">Link (opcional)</span><input id="aLink" placeholder="Planilha, documento, vídeo…"></label>
     <label class="check"><input type="checkbox" id="aFixar"> Fixar no topo do mural</label>
     <div class="msg" id="mAviso" role="status"></div>
@@ -238,10 +267,18 @@ dialog::backdrop{background:rgba(20,20,20,.35)}
     <div class="cat" id="lrCat" style="font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:rgba(0,0,0,.6)"></div>
     <h2 id="lrTitulo"></h2>
     <div class="texto" id="lrTexto"></div>
+    <div id="lrFotos"></div>
     <div id="lrLink"></div>
     <div class="rodape"><div class="mut" id="lrAutor"></div><div id="lrCiente"></div></div>
     <div class="gestao" id="lrGestao"></div>
   </div>
+</dialog>
+
+<dialog id="dlgFoto" aria-label="Foto do aviso">
+  <button type="button" class="fechar" id="dfFechar" aria-label="Fechar">×</button>
+  <button type="button" class="nav ant" id="dfAnt" aria-label="Foto anterior">‹</button>
+  <img id="dfImg" alt="">
+  <button type="button" class="nav prox" id="dfProx" aria-label="Próxima foto">›</button>
 </dialog>
 
 <dialog id="dlgLeit">
@@ -253,7 +290,7 @@ dialog::backdrop{background:rgba(20,20,20,.35)}
   </div>
 </dialog>
 
-<script src="config.js?v=5"></script>
+<script src="config.js?v=6"></script>
 <script>
 const SC_CENTER = 'https://saintgermainb-hub.github.io/saintcenter/';
 const API = window.MURAL_API || '';
@@ -261,7 +298,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const dataBR = d => /^\d{4}-\d{2}-\d{2}$/.test(d||'') ? d.split('-').reverse().join('/') : '';
-const S = { token:'', eu:null, publica:false, avisos:[], lidos:{}, categorias:[], aba:'todos', q:'', cat:'', abertos:{}, editando:null, carregadoEm:0 };
+const S = { token:'', eu:null, publica:false, avisos:[], lidos:{}, categorias:[], aba:'todos', q:'', cat:'', abertos:{}, editando:null, carregadoEm:0, fotosForm:[], galeria:[], gi:0 };
+const MAX_FOTOS = 6;
 
 function msg(el, texto, tipo){ const m=$(el); m.textContent=texto||''; m.className='msg'+(texto&&tipo?' '+tipo:''); }
 function quando(iso){
@@ -274,6 +312,17 @@ function quando(iso){
 }
 function textoRico(t){
   return esc(t).replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g,'<br>');
+}
+
+/* fotos: abre direto do Drive; se o Drive não deixar, pede ao servidor */
+const fotoUrl = (id, w) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w||1000}`;
+const fotoCache = {};
+function imgFoto(id, w, alt){ return `<img src="${fotoUrl(id,w)}" data-foto="${esc(id)}" alt="${esc(alt||'Foto do aviso')}" loading="lazy" referrerpolicy="no-referrer" onerror="fotoReserva(this)">`; }
+async function fotoReserva(img){
+  const id = img.dataset.foto; if(!id || img.dataset.tentou) return;
+  img.dataset.tentou = '1';
+  try{ fotoCache[id] = fotoCache[id] || call('foto', id); img.src = await fotoCache[id]; }
+  catch(_){ delete fotoCache[id]; img.alt = 'Não foi possível abrir a foto'; }
 }
 
 async function call(fn, ...args){
@@ -385,6 +434,7 @@ function cartao(a){
   const pend = a.status==='ativo' && (a.faltam > 0 || novo);
   return `<article class="nota ${esc(a.prioridade)}${a.fixado?' fixado':''}${lido?' lido':''}${a.status!=='ativo'?' arq':''}${pend?' pendente':''}${novo?' meu':''}" style="--fita:${a.prioridade==='urgente'?'#a8352b':papel(a.categoria)}" tabindex="0" data-ler="${a.id}" aria-label="${esc(a.titulo)}">
     <div class="cat"><span>${esc(a.categoria)}</span>${a.prioridade==='importante'?'<i>Importante</i>':''}${a.status!=='ativo'?'<i>Arquivado</i>':''}<em class="selos">${a.prioridade==='urgente' ? `<span class="fita">Urgente</span>` : ''}${novo ? `<span class="carimbo">Novo</span>` : ''}</em></div>
+    ${(a.fotos||[]).length ? `<div class="capa">${imgFoto(a.fotos[0], 640, a.titulo)}${a.fotos.length>1?`<b>+${a.fotos.length-1}</b>`:''}</div>` : ''}
     <h2>${esc(a.titulo)}</h2>
     <div class="resumo">${resumoTexto(a.texto)}</div>
     <div class="assin"><div class="autor"><b>${esc(a.autorNome)}</b>${esc(quando(a.criadoEm))}${dataBR(a.expiraEm)?` · até ${esc(dataBR(a.expiraEm))}`:''}</div>${ciente}</div>
@@ -441,6 +491,10 @@ function abrirLer(id){
   $('lrCat').textContent = [a.categoria, a.prioridade!=='normal' ? (a.prioridade==='urgente'?'Urgente':'Importante') : '', a.fixado?'Fixado':''].filter(Boolean).join(' · ');
   $('lrTitulo').textContent = a.titulo;
   $('lrTexto').innerHTML = textoRico(a.texto);
+  const fs = a.fotos || [];
+  $('lrFotos').className = fs.length === 1 ? 'uma' : '';
+  $('lrFotos').innerHTML = fs.map((id,i) => `<button type="button" data-zoom="${i}" aria-label="Ampliar foto ${i+1}">${imgFoto(id, fs.length===1?1200:500, 'Foto '+(i+1)+' do aviso')}</button>`).join('');
+  S.galeria = fs;
   $('lrLink').innerHTML = a.link ? `<a class="link" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir link →</a>` : '';
   $('lrAutor').innerHTML = `${esc(a.autorNome)} · ${esc(quando(a.criadoEm))}${a.editadoEm?' · editado':''}${dataBR(a.expiraEm)?` · fica até ${esc(dataBR(a.expiraEm))}`:''}`;
   $('lrCiente').innerHTML = a.status!=='ativo' ? '' : lido ? `<span class="cienteok">Ciente · ${esc(quando(lido))}</span>` : `<button type="button" data-ciente="${a.id}">Li e estou ciente</button>`;
@@ -455,6 +509,21 @@ function abrirLer(id){
 }
 $('lrPapel').addEventListener('click', e => { const b = e.target.closest('button[data-ciente],button[data-fixar],button[data-editar],button[data-arquivar],button[data-leit]'); if(b && !b.disabled) acao(b); });
 $('lrFechar').onclick = () => $('dlgLer').close();
+$('lrFotos').addEventListener('click', e => { const b = e.target.closest('[data-zoom]'); if(b) verFoto(+b.dataset.zoom); });
+function verFoto(i){
+  const n = S.galeria.length; if(!n) return;
+  S.gi = (i + n) % n;
+  const img = $('dfImg'), id = S.galeria[S.gi];
+  delete img.dataset.tentou; img.dataset.foto = id; img.onerror = () => fotoReserva(img);
+  img.src = fotoUrl(id, 2000); img.alt = `Foto ${S.gi+1} de ${n}`;
+  $('dfAnt').hidden = $('dfProx').hidden = n < 2;
+  if(!$('dlgFoto').open) $('dlgFoto').showModal();
+}
+$('dfFechar').onclick = () => $('dlgFoto').close();
+$('dfAnt').onclick = () => verFoto(S.gi - 1);
+$('dfProx').onclick = () => verFoto(S.gi + 1);
+$('dlgFoto').addEventListener('click', e => { if(e.target === $('dlgFoto')) $('dlgFoto').close(); });
+$('dlgFoto').addEventListener('keydown', e => { if(e.key==='ArrowLeft') verFoto(S.gi-1); if(e.key==='ArrowRight') verFoto(S.gi+1); });
 $('dlgLer').addEventListener('click', e => { if(e.target === $('dlgLer')) $('dlgLer').close(); });
 
 function abrirAviso(a){
@@ -470,17 +539,69 @@ function abrirAviso(a){
     $('aLink').value = a.link; $('aExpira').value = a.expiraEm; $('aFixar').checked = a.fixado;
     const p = $('fAviso').querySelector(`input[name="aPri"][value="${a.prioridade}"]`); if(p) p.checked = true;
   }
+  S.fotosForm = (a && a.fotos || []).map(id => ({ id }));
+  desenharFotosForm();
   $('dlgAviso').showModal();
   setTimeout(() => $('aTitulo').focus(), 30);
 }
 $('btnNovo').onclick = () => abrirAviso(null);
+
+/* fotos no formulário: reduz no navegador (até 1600 px) antes de enviar */
+function desenharFotosForm(){
+  const cheio = S.fotosForm.length >= MAX_FOTOS;
+  $('aFotos').innerHTML = S.fotosForm.map((f,i) => `<div class="mini-foto">${f.id ? imgFoto(f.id, 200) : `<img src="${f.dataUrl}" alt="">`}<button type="button" data-tirar="${i}" aria-label="Tirar foto ${i+1}">×</button></div>`).join('')
+    + (cheio ? '' : `<button type="button" class="ghost add" id="aAddFoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>${S.fotosForm.length ? 'Mais fotos' : 'Adicionar foto'}</button>`);
+}
+$('aFotos').addEventListener('click', e => {
+  const t = e.target.closest('[data-tirar]');
+  if(t){ S.fotosForm.splice(+t.dataset.tirar, 1); desenharFotosForm(); return; }
+  if(e.target.closest('#aAddFoto')) $('aArquivo').click();
+});
+function reduzir(arq){
+  return new Promise((ok, falha) => {
+    const url = URL.createObjectURL(arq), img = new Image();
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error(`Não consegui abrir "${arq.name || 'a imagem'}". Use JPG ou PNG.`)); };
+    img.src = url;
+  });
+}
+async function adicionarFotos(arqs){
+  arqs = [...arqs].filter(f => /^image\//.test(f.type));
+  if(!arqs.length) return;
+  const vagas = MAX_FOTOS - S.fotosForm.length;
+  if(arqs.length > vagas) msg('mAviso', `Cabem até ${MAX_FOTOS} fotos por aviso.`, 'erro');
+  for(const f of arqs.slice(0, Math.max(0, vagas))){
+    try{ S.fotosForm.push({ dataUrl: await reduzir(f), nome: f.name || 'print' }); desenharFotosForm(); }
+    catch(er){ msg('mAviso', er.message, 'erro'); }
+  }
+}
+$('aArquivo').addEventListener('change', e => { adicionarFotos(e.target.files); e.target.value = ''; });
+$('aTexto').addEventListener('paste', e => {
+  const imgs = [...(e.clipboardData && e.clipboardData.files || [])].filter(f => /^image\//.test(f.type));
+  if(imgs.length){ e.preventDefault(); adicionarFotos(imgs); }
+});
+$('fAviso').addEventListener('dragover', e => { if([...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
+$('fAviso').addEventListener('drop', e => { if(e.dataTransfer.files.length){ e.preventDefault(); adicionarFotos(e.dataTransfer.files); } });
 $('aCancelar').onclick = () => $('dlgAviso').close();
 $('fAviso').addEventListener('submit', async e => {
   e.preventDefault();
   const dados = { titulo:$('aTitulo').value, texto:$('aTexto').value, categoria:$('aCat').value, link:$('aLink').value,
     expiraEm:$('aExpira').value, fixado:$('aFixar').checked, prioridade:($('fAviso').querySelector('input[name="aPri"]:checked')||{}).value || 'normal' };
-  $('aSalvar').disabled = true; msg('mAviso', S.editando ? 'Salvando…' : 'Publicando…');
+  $('aSalvar').disabled = true;
   try{
+    const novas = S.fotosForm.filter(f => !f.id);
+    for(let i = 0; i < novas.length; i++){
+      msg('mAviso', `Enviando foto ${i+1} de ${novas.length}…`);
+      novas[i].id = (await call('enviarFoto', novas[i].dataUrl, novas[i].nome)).id;
+    }
+    dados.fotos = S.fotosForm.map(f => f.id);
+    msg('mAviso', S.editando ? 'Salvando…' : 'Publicando…');
     aplicar(S.editando ? await call('editar', S.editando.id, dados) : await call('publicar', dados));
     $('dlgAviso').close();
     msg('mGeral', S.editando ? 'Aviso atualizado.' : 'Aviso publicado. O time vê na próxima vez que abrir o mural ou o Saint Center.', 'ok');

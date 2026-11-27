@@ -11,6 +11,12 @@
    A planilha com os avisos e as leituras é criada sozinha no seu Drive
    ("Saint Center · Mural de Avisos (dados)") na primeira vez que alguém usar.
    O login é o mesmo do Saint Center: este servidor confere a sessão lá.
+   As fotos dos avisos ficam na pasta "Saint Center · Mural de Avisos (fotos)",
+   criada sozinha no seu Drive na primeira foto enviada.
+
+   Ao atualizar este arquivo: cole tudo, salve e vá em Implantar > Gerenciar
+   implantações > lápis > Versão: "Nova versão" > Implantar. Assim o link /exec
+   continua o mesmo. Se o Google pedir autorização nova (acesso ao Drive), aceite.
 
    Quem publica: coordenação (admin do Saint Center), quem tem o nível
    "Publicar" no Mural em Pessoas e acessos, e quem tem cargo de
@@ -75,7 +81,7 @@ function exigirPublica(ctx) {
 
 /* ---------------- planilha ---------------- */
 const ABAS = {
-  avisos: ['id', 'titulo', 'texto', 'categoria', 'prioridade', 'fixado', 'link', 'autorLogin', 'autorNome', 'criadoEm', 'editadoEm', 'status', 'expiraEm'],
+  avisos: ['id', 'titulo', 'texto', 'categoria', 'prioridade', 'fixado', 'link', 'autorLogin', 'autorNome', 'criadoEm', 'editadoEm', 'status', 'expiraEm', 'fotos'],
   leituras: ['chave', 'avisoId', 'login', 'nome', 'em'],
   pessoas: ['login', 'nome', 'cargo', 'ultimo'],
   config: ['chave', 'json'],
@@ -102,6 +108,9 @@ function aba(nome) {
     sh.getRange('A:Z').setNumberFormat('@');
     const s1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('Página1') || ss.getSheetByName('Planilha1');
     if (s1 && ss.getSheets().length > 1) ss.deleteSheet(s1);
+  } else if (sh.getLastColumn() < ABAS[nome].length) {
+    // coluna nova (ex.: fotos) em planilha antiga: completa o cabeçalho
+    sh.getRange(1, 1, 1, ABAS[nome].length).setValues([ABAS[nome]]).setFontWeight('bold');
   }
   return sh;
 }
@@ -192,7 +201,8 @@ function todosAvisos() {
     id: String(l[0]), titulo: String(l[1] || ''), texto: String(l[2] || ''), categoria: String(l[3] || 'Geral'),
     prioridade: String(l[4] || 'normal'), fixado: String(l[5]) === 'sim', link: String(l[6] || ''),
     autorLogin: String(l[7] || ''), autorNome: String(l[8] || ''), criadoEm: txt(l[9]), editadoEm: txt(l[10]),
-    status: String(l[11] || 'ativo'), expiraEm: dia(l[12])
+    status: String(l[11] || 'ativo'), expiraEm: dia(l[12]),
+    fotos: String(l[13] || '').split(',').map(x => x.trim()).filter(Boolean)
   })));
 }
 /* leituras agrupadas: { avisoId: { login: em } } */
@@ -255,7 +265,8 @@ function limparAviso(d) {
   let link = String(d.link || '').trim().slice(0, 500);
   if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
   const expiraEm = /^\d{4}-\d{2}-\d{2}$/.test(String(d.expiraEm || '')) ? String(d.expiraEm) : '';
-  return { titulo, texto, categoria: String(d.categoria || 'Geral').trim().slice(0, 40) || 'Geral', prioridade, fixado: !!d.fixado, link, expiraEm };
+  const fotos = [...new Set((Array.isArray(d.fotos) ? d.fotos : []).map(String).filter(x => /^[\w-]{20,80}$/.test(x)))].slice(0, MAX_FOTOS);
+  return { titulo, texto, categoria: String(d.categoria || 'Geral').trim().slice(0, 40) || 'Geral', prioridade, fixado: !!d.fixado, link, expiraEm, fotos };
 }
 
 function publicar(ctx, dados) {
@@ -264,7 +275,7 @@ function publicar(ctx, dados) {
   const id = 'A' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
   travar(() => {
     aba('avisos').appendRow([id, a.titulo, a.texto, a.categoria, a.prioridade, a.fixado ? 'sim' : 'nao', a.link,
-      ctx.u.login, ctx.u.nome || ctx.u.login, agora(), '', 'ativo', a.expiraEm ? "'" + a.expiraEm : '']);
+      ctx.u.login, ctx.u.nome || ctx.u.login, agora(), '', 'ativo', a.expiraEm ? "'" + a.expiraEm : '', a.fotos.join(',')]);
     // quem publica já fica como ciente
     aba('leituras').appendRow([id + '|' + ctx.u.login, id, ctx.u.login, ctx.u.nome || ctx.u.login, agora()]);
   });
@@ -282,7 +293,7 @@ function editar(ctx, id, dados) {
     const sh = aba('avisos');
     sh.getRange(r, 2, 1, 6).setValues([[a.titulo, a.texto, a.categoria, a.prioridade, a.fixado ? 'sim' : 'nao', a.link]]);
     sh.getRange(r, 11).setValue(agora());
-    sh.getRange(r, 13).setValue(a.expiraEm ? "'" + a.expiraEm : '');
+    sh.getRange(r, 13, 1, 2).setValues([[a.expiraEm ? "'" + a.expiraEm : '', a.fotos.join(',')]]);
   });
   limparCache();
   log(ctx, 'editou', a.titulo);
@@ -352,4 +363,38 @@ function salvarCategorias(ctx, lista) {
   return lerConfig().categorias;
 }
 
-const API_FN = { iniciar, resumo, publicar, editar, fixar, arquivar, ciente, leitores, salvarCategorias };
+/* ---------------- fotos ----------------
+   A página reduz a foto antes de enviar (até 1600 px). Cada foto vira um arquivo na
+   pasta do mural no Drive, aberto para quem tem o link, e o aviso guarda só o id. */
+const MAX_FOTOS = 6;
+function pastaFotos() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('PASTA_FOTOS');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (_) { } }
+  const p = DriveApp.createFolder('Saint Center · Mural de Avisos (fotos)');
+  props.setProperty('PASTA_FOTOS', p.getId());
+  return p;
+}
+function enviarFoto(ctx, dataUrl, nome) {
+  exigirPublica(ctx);
+  const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+\/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) throw new Error('Esse arquivo não é uma imagem aceita. Use JPG, PNG ou WEBP.');
+  const bytes = Utilities.base64Decode(m[2]);
+  if (bytes.length > 6 * 1024 * 1024) throw new Error('Foto grande demais (máx. 6 MB).');
+  const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
+  const base = String(nome || 'foto').replace(/\.[^.]*$/, '').replace(/[^\w\- À-ú]/g, '').trim().slice(0, 60) || 'foto';
+  const f = pastaFotos().createFile(Utilities.newBlob(bytes, m[1], base + '.' + ext));
+  try { f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (_) { } // se o Google Workspace bloquear, a página usa foto() abaixo
+  log(ctx, 'enviou foto', f.getId());
+  return { id: f.getId() };
+}
+/* devolve a foto em texto, para quando o Drive não deixa abrir pelo link */
+function foto(ctx, id) {
+  id = String(id || '');
+  const a = todosAvisos().find(x => x.fotos.indexOf(id) >= 0 && (ctx.publica || (x.status === 'ativo' && !expirado(x))));
+  if (!a) throw new Error('Foto não encontrada.');
+  const b = DriveApp.getFileById(id).getBlob();
+  return 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes());
+}
+
+const API_FN = { iniciar, resumo, publicar, editar, fixar, arquivar, ciente, leitores, salvarCategorias, enviarFoto, foto };
